@@ -115,3 +115,61 @@ The baseline for this project starts with the homepage: https://www.discovertuni
    - **Which metric(s) are being affected?** Speed Index, LCP, and overall Lighthouse Performance.
    - **What is the cause, or most likely cause?** PageSpeed flagged forced reflow, missing explicit image dimensions, and non-composited animations, all of which increase browser work during rendering.
    - **What is the solution, or a likely solution?** Add explicit `width` and `height` to images, avoid layout-thrashing scripts, prefer `transform` and `opacity` for animations, and simplify expensive visual effects above the fold.
+
+## Networking Baseline From The Primary Page
+
+These networking stats were measured on the homepage after clearing the browser cache once, then reloading the same page for a soft refresh.
+
+### Homepage networking stats
+
+- **Cold-load requests:** 168
+- **Cold-load transferred:** 5,438,056 bytes, about 5.19 MiB
+- **Cold-load total resource size:** 6,953,756 bytes, about 6.63 MiB
+- **Cold-load encoded size:** 5,390,956 bytes, about 5.14 MiB
+- **Approximate compression reduction:** about 22.5% overall from decoded resource size to encoded size
+
+### Soft refresh and caching
+
+- **Soft-refresh requests:** 170
+- **Soft-refresh transferred:** 1,429 bytes
+- **Reduction due to caching:** 5,436,627 bytes less transferred than the cold load, or about 99.97% less network transfer
+- **Cached requests on soft refresh:** 167 of 170 requests had zero network transfer in the browser timing data
+
+### Asset mix
+
+- **Images:** 80 requests, 4,831,892 bytes transferred, about 4.61 MiB
+- **JavaScript:** 41 requests, 385,678 bytes transferred, about 0.37 MiB
+- **CSS:** 38 requests, 203,715 bytes transferred, about 0.19 MiB
+- **Other:** 9 requests, 16,771 bytes transferred
+
+### Compression notes
+
+- **Images:** effectively no additional transfer compression in the browser timing data; encoded and decoded sizes were nearly identical, so the main issue is image weight rather than missing gzip or Brotli
+- **JavaScript:** encoded 374,878 bytes vs decoded 1,366,396 bytes, so JavaScript is compressed in transit
+- **CSS:** encoded 192,315 bytes vs decoded 690,271 bytes, so CSS is also compressed in transit
+
+### Additional networking findings
+
+1. **Images dominate the homepage payload.**
+   - **How does this affect users?** Mobile users spend most of their download budget on images, which slows the first meaningful view of the page and makes the homepage feel heavy on slower connections.
+   - **Which metric(s) are being affected?** Total transfer size, Largest Contentful Paint (LCP), First Contentful Paint (FCP), and overall Performance.
+   - **What is the cause, or most likely cause?** Images account for about 4.61 MiB out of the 5.19 MiB cold-load transfer, which is roughly 89% of transferred bytes.
+   - **What is the solution, or a likely solution?** Resize large images, serve responsive image variants, use more aggressive compression, and avoid loading non-critical homepage imagery above the fold.
+
+2. **The homepage makes too many requests.**
+   - **How does this affect users?** A high request count increases connection overhead, slows discovery of important assets, and makes the page more fragile on high-latency mobile networks.
+   - **Which metric(s) are being affected?** FCP, LCP, Speed Index, and total load time.
+   - **What is the cause, or most likely cause?** The homepage issued 168 requests on a cold load, including 80 image requests plus 79 CSS and JavaScript requests combined.
+   - **What is the solution, or a likely solution?** Reduce the number of separate files, combine or eliminate low-value assets, lazy-load below-the-fold images, and remove plugins or widgets that contribute extra requests.
+
+3. **JavaScript and CSS are compressed, but there are still too many front-end assets.**
+   - **How does this affect users?** Even when compression helps, many CSS and JavaScript files still create extra network overhead and browser parsing work.
+   - **Which metric(s) are being affected?** FCP, Speed Index, Total Blocking Time, and overall Performance.
+   - **What is the cause, or most likely cause?** The homepage loads 41 JavaScript files and 38 CSS files. The bytes are compressed well, but the file count is still high and matches the earlier Lighthouse findings about unused CSS and JavaScript.
+   - **What is the solution, or a likely solution?** Remove unused code, defer non-critical scripts, reduce dependency bloat, and consolidate styles and scripts where practical.
+
+4. **Caching helps a lot on repeat views, but the first visit is still expensive.**
+   - **How does this affect users?** Returning visitors get a much faster refresh, but first-time visitors still pay the full cost of a heavy homepage.
+   - **Which metric(s) are being affected?** Cold-load transfer size, FCP, LCP, and perceived first-visit speed.
+   - **What is the cause, or most likely cause?** The soft refresh transferred only 1,429 bytes, so caching is working well once assets are stored locally. The bigger issue is the large uncached first load.
+   - **What is the solution, or a likely solution?** Keep the strong caching behavior, but reduce the cold-load payload itself by optimizing images, trimming CSS and JavaScript, and prioritizing only the assets needed for the initial viewport.
