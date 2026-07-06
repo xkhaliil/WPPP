@@ -84,37 +84,11 @@ The baseline for this project starts with the homepage: https://www.discovertuni
 - **Field data:** LCP 3.2 s, INP 100 ms, CLS 0, FCP 2.9 s, TTFB 1.0 s
 - **Lab data:** FCP 5.1 s, LCP 14.5 s, TBT 80 ms, CLS 0, Speed Index 14.9 s
 
-### Key findings
+### Rendering and UX observations
 
-1. **The homepage starts rendering too late.**
-   - **How does this affect users?** Users wait too long before they see meaningful content, which makes the site feel slow and less responsive on mobile connections.
-   - **Which metric(s) are being affected?** First Contentful Paint (5.1 s), Speed Index (14.9 s), and Largest Contentful Paint (14.5 s).
-   - **What is the cause, or most likely cause?** PageSpeed flagged render-blocking requests and slow font loading, which suggests CSS, fonts, and possibly older theme assets are delaying the first visible paint.
-   - **What is the solution, or a likely solution?** Inline critical CSS, defer non-critical CSS and JavaScript, preload important fonts, and use `font-display: swap` so text can appear sooner.
-
-2. **The largest visible homepage content loads far too slowly.**
-   - **How does this affect users?** The main hero or featured section appears late, so visitors do not quickly see the page's most important content.
-   - **Which metric(s) are being affected?** Largest Contentful Paint (14.5 s lab) and the field LCP result (3.2 s), which is already outside the "good" range.
-   - **What is the cause, or most likely cause?** PageSpeed identified image-delivery issues and LCP request discovery problems, which usually means the hero image is too heavy, not prioritized, or loaded too late.
-   - **What is the solution, or a likely solution?** Compress and resize the main images, serve responsive images, use modern formats such as WebP or AVIF where possible, and preload the LCP image so the browser fetches it earlier.
-
-3. **The page sends too much code and media on the first load.**
-   - **How does this affect users?** Large downloads slow the page on mobile networks and make the whole experience feel heavier, especially for first-time visitors.
-   - **Which metric(s) are being affected?** Performance score, FCP, LCP, and Speed Index.
-   - **What is the cause, or most likely cause?** The homepage had an enormous network payload of about 6,082 KiB, plus PageSpeed reported unused JavaScript, unused CSS, legacy JavaScript, and minification opportunities.
-   - **What is the solution, or a likely solution?** Remove unused CSS and JavaScript, minify assets, cut legacy scripts where possible, lazy-load non-essential media, and reduce the amount of content loaded above the fold.
-
-4. **Caching and font delivery are not efficient enough.**
-   - **How does this affect users?** Repeat visits do not benefit as much as they should, and users may experience slow text rendering or flashes of invisible text.
-   - **Which metric(s) are being affected?** FCP, Speed Index, and indirectly LCP.
-   - **What is the cause, or most likely cause?** PageSpeed reported inefficient cache lifetimes and font-display issues, which means some assets are not being reused aggressively enough and fonts are likely blocking text rendering.
-   - **What is the solution, or a likely solution?** Increase cache lifetimes for static assets, self-host or subset critical fonts if practical, preload key fonts, and use `font-display: swap`.
-
-5. **Layout and rendering work is still more expensive than it should be.**
-   - **How does this affect users?** Even when the page is visible, scrolling and rendering can feel less smooth, especially on lower-powered phones.
-   - **Which metric(s) are being affected?** Speed Index, LCP, and overall Lighthouse Performance.
-   - **What is the cause, or most likely cause?** PageSpeed flagged forced reflow, missing explicit image dimensions, and non-composited animations, all of which increase browser work during rendering.
-   - **What is the solution, or a likely solution?** Add explicit `width` and `height` to images, avoid layout-thrashing scripts, prefer `transform` and `opacity` for animations, and simplify expensive visual effects above the fold.
+- The homepage fails Core Web Vitals on mobile mainly because LCP is too slow.
+- The most concerning rendering metrics are LCP 14.5 s in lab data, Speed Index 14.9 s, and FCP 5.1 s.
+- INP 100 ms and CLS 0 are comparatively healthy and should be preserved during optimization.
 
 ## Networking Baseline From The Primary Page
 
@@ -148,28 +122,65 @@ These networking stats were measured on the homepage after clearing the browser 
 - **JavaScript:** encoded 374,878 bytes vs decoded 1,366,396 bytes, so JavaScript is compressed in transit
 - **CSS:** encoded 192,315 bytes vs decoded 690,271 bytes, so CSS is also compressed in transit
 
-### Additional networking findings
+### Networking observations
 
-1. **Images dominate the homepage payload.**
-   - **How does this affect users?** Mobile users spend most of their download budget on images, which slows the first meaningful view of the page and makes the homepage feel heavy on slower connections.
-   - **Which metric(s) are being affected?** Total transfer size, Largest Contentful Paint (LCP), First Contentful Paint (FCP), and overall Performance.
-   - **What is the cause, or most likely cause?** Images account for about 4.61 MiB out of the 5.19 MiB cold-load transfer, which is roughly 89% of transferred bytes.
-   - **What is the solution, or a likely solution?** Resize large images, serve responsive image variants, use more aggressive compression, and avoid loading non-critical homepage imagery above the fold.
+- The cold load is expensive at about 5.19 MiB transferred and 6.63 MiB total decoded resource size.
+- Images are the dominant problem: about 4.61 MiB and roughly 89% of cold-load transferred bytes.
+- Repeat-view caching is strong because the soft refresh transferred only 1,429 bytes.
+- CSS and JavaScript are compressed in transit, but there are still too many separate front-end files.
 
-2. **The homepage makes too many requests.**
-   - **How does this affect users?** A high request count increases connection overhead, slows discovery of important assets, and makes the page more fragile on high-latency mobile networks.
+## Cleaned Baseline Findings
+
+The findings below combine rendering and networking issues into a single cleaned list. Each one is intended to be independently observable.
+
+### Corrective findings
+
+1. **Render-blocking CSS and font delivery delay the first visible paint.**
+   - **How does this affect users?** Users wait too long before seeing useful content, so the page feels slow immediately.
+   - **Which metric(s) are being affected?** FCP 5.1 s, Speed Index 14.9 s, and indirectly LCP.
+   - **What is the cause, or most likely cause?** PageSpeed flagged render-blocking requests and font-display problems, which suggests stylesheets and font assets are delaying initial rendering.
+   - **What is the solution, or a likely solution?** Inline critical CSS, defer non-critical CSS and JavaScript, preload key fonts, and use `font-display: swap`.
+
+2. **The homepage LCP element appears too late.**
+   - **How does this affect users?** The main hero or featured content appears late, so visitors do not quickly see the most important part of the page.
+   - **Which metric(s) are being affected?** LCP 14.5 s in lab data and field LCP 3.2 s.
+   - **What is the cause, or most likely cause?** The LCP image or hero content is likely too large, discovered too late, or competing with other resources for bandwidth.
+   - **What is the solution, or a likely solution?** Preload the LCP image, compress and resize hero media, serve responsive image variants, and simplify above-the-fold content.
+
+3. **Images dominate the page payload.**
+   - **How does this affect users?** Users spend most of their mobile bandwidth downloading images, which makes the page feel heavy and slows visible loading.
+   - **Which metric(s) are being affected?** Transfer size, FCP, LCP, Speed Index, and overall Performance.
+   - **What is the cause, or most likely cause?** Images account for about 4.61 MiB out of 5.19 MiB transferred on the cold load, with little additional compression benefit in transit.
+   - **What is the solution, or a likely solution?** Use smaller source files, responsive images, stronger image compression, and lazy loading for non-critical visuals.
+
+4. **The homepage makes too many requests.**
+   - **How does this affect users?** High request counts create more network overhead and slow asset discovery, especially on high-latency mobile connections.
    - **Which metric(s) are being affected?** FCP, LCP, Speed Index, and total load time.
-   - **What is the cause, or most likely cause?** The homepage issued 168 requests on a cold load, including 80 image requests plus 79 CSS and JavaScript requests combined.
-   - **What is the solution, or a likely solution?** Reduce the number of separate files, combine or eliminate low-value assets, lazy-load below-the-fold images, and remove plugins or widgets that contribute extra requests.
+   - **What is the cause, or most likely cause?** The homepage makes 168 cold-load requests, including 80 image requests, 41 JavaScript requests, and 38 CSS requests.
+   - **What is the solution, or a likely solution?** Remove unnecessary assets, lazy-load below-the-fold images, and reduce the number of files loaded during the initial view.
 
-3. **JavaScript and CSS are compressed, but there are still too many front-end assets.**
-   - **How does this affect users?** Even when compression helps, many CSS and JavaScript files still create extra network overhead and browser parsing work.
-   - **Which metric(s) are being affected?** FCP, Speed Index, Total Blocking Time, and overall Performance.
-   - **What is the cause, or most likely cause?** The homepage loads 41 JavaScript files and 38 CSS files. The bytes are compressed well, but the file count is still high and matches the earlier Lighthouse findings about unused CSS and JavaScript.
-   - **What is the solution, or a likely solution?** Remove unused code, defer non-critical scripts, reduce dependency bloat, and consolidate styles and scripts where practical.
+5. **There is too much front-end code and too many separate CSS and JavaScript files.**
+   - **How does this affect users?** Even when files are compressed, the browser still has to download, parse, and execute more code than necessary.
+   - **Which metric(s) are being affected?** Performance score, FCP, Speed Index, and Total Blocking Time.
+   - **What is the cause, or most likely cause?** The homepage loads 41 JavaScript files and 38 CSS files, and earlier Lighthouse results also flagged unused CSS, unused JavaScript, and legacy JavaScript.
+   - **What is the solution, or a likely solution?** Remove unused code, defer non-critical scripts, reduce plugin and library bloat, and consolidate assets where practical.
 
-4. **Caching helps a lot on repeat views, but the first visit is still expensive.**
-   - **How does this affect users?** Returning visitors get a much faster refresh, but first-time visitors still pay the full cost of a heavy homepage.
-   - **Which metric(s) are being affected?** Cold-load transfer size, FCP, LCP, and perceived first-visit speed.
-   - **What is the cause, or most likely cause?** The soft refresh transferred only 1,429 bytes, so caching is working well once assets are stored locally. The bigger issue is the large uncached first load.
-   - **What is the solution, or a likely solution?** Keep the strong caching behavior, but reduce the cold-load payload itself by optimizing images, trimming CSS and JavaScript, and prioritizing only the assets needed for the initial viewport.
+6. **Rendering work is more expensive than it should be after resources arrive.**
+   - **How does this affect users?** The page can feel less smooth during layout and visual updates, especially on lower-powered devices.
+   - **Which metric(s) are being affected?** Speed Index, LCP, and overall Lighthouse Performance.
+   - **What is the cause, or most likely cause?** PageSpeed flagged forced reflow, missing image dimensions, and non-composited animations, which means the browser is doing unnecessary layout and paint work.
+   - **What is the solution, or a likely solution?** Add explicit image dimensions, avoid layout-thrashing scripts, prefer `transform` and `opacity` for animations, and simplify expensive visual effects.
+
+### Good findings
+
+1. **Layout stability is already strong.**
+   - **How does this affect users?** The page does not visibly jump around while loading, which makes reading and tapping more reliable.
+   - **Which metric(s) are being affected?** CLS 0.
+   - **What is the cause, or most likely cause?** The page appears to reserve space well enough for major content and avoids large unexpected shifts during loading.
+   - **What is the solution, or a likely solution?** Preserve this behavior while optimizing images and layout by keeping explicit dimensions and stable content containers.
+
+2. **Repeat-view caching is very effective.**
+   - **How does this affect users?** Returning visitors get a much lighter refresh and a faster repeat experience.
+   - **Which metric(s) are being affected?** Soft-refresh transfer size and repeat-load perceived speed.
+   - **What is the cause, or most likely cause?** The soft refresh transferred only 1,429 bytes, meaning most homepage assets were served from cache.
+   - **What is the solution, or a likely solution?** Keep the current caching strengths and focus future optimization work on reducing the first-load payload.
