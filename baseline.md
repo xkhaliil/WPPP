@@ -91,12 +91,14 @@ These networking stats were measured on the homepage using a **mobile viewport**
 JavaScript is not bundled at all. The site loads 41 individual JavaScript files, each delivered as a separate HTTP request. This is the default Drupal 7 behaviour with JS aggregation disabled. There is no route splitting, component splitting, or code splitting of any kind.
 
 **Script loading strategy:**
+
 - 39 of 41 script tags are placed in the `<head>` element
 - 37 of those 39 first-party scripts carry no `defer` or `async` attribute, making them render-blocking
 - Only the Google Analytics and Google Tag Manager scripts use `async`
 - No `<link rel="preload">` hints are used for any resource on the page
 
 **Key libraries loaded:**
+
 - jQuery 1.10.2 — released in 2013, heavily outdated
 - Bootstrap 3.3.5 JS — outdated; loaded twice: once from `cdn.jsdelivr.net` and again from the theme's own `/sites/all/themes/bootstrap/js/bootstrap.js`
 - Three competing slider libraries loaded on every page: bxslider, flexslider, and views_slideshow
@@ -120,6 +122,7 @@ JavaScript is not bundled at all. The site loads 41 individual JavaScript files,
 The site uses two strategies in parallel. Two CDN-hosted CSS files are loaded as `<link>` tags (Bootstrap 3.3.5 from `cdn.jsdelivr.net` and the Drupal Bootstrap companion styles from the same CDN). Drupal 7's optional CSS aggregation has created aggregated wrapper files that use `@import` to pull in individual module CSS files at runtime, resulting in 94 additional CSS resources loaded via `@import`.
 
 **Problems with this approach:**
+
 - CSS `@import` forces sequential discovery: the browser must fetch the aggregated wrapper before it can detect and request the underlying files, adding at least one extra round-trip
 - All 94 CSS files are loaded globally on every page regardless of which modules or features are active on that page
 - There is no route-level or component-level splitting
@@ -157,17 +160,18 @@ Thumbnail images use Drupal image styles for basic resizing (e.g., `styles/thumb
 
 ### Third-Party Resources
 
-| Tool | Domain | Scripts | Load strategy |
-|------|---------|---------|---------------|
-| Google Tag Manager | googletagmanager.com | 3 requests | `async` |
-| Google Analytics Universal (deprecated) | google-analytics.com | 1 request | `async` |
-| Google Analytics GA4 — property 1 | googletagmanager.com | via GTM | `async` via GTM |
-| Google Analytics GA4 — property 2 | googletagmanager.com | via GTM | `async` via GTM |
-| Google Maps API | maps.googleapis.com | 3 requests (incl. sub-requests) | **synchronous, no defer** |
-| DoubleClick / Google Ads (DC-8993070) | doubleclick.net | 0 scripts (iframe + beacon) | deferred beacon |
-| Bootstrap CSS + JS | cdn.jsdelivr.net | 2 requests | `<link>` / synchronous `<script>` |
+| Tool                                    | Domain               | Scripts                         | Load strategy                     |
+| --------------------------------------- | -------------------- | ------------------------------- | --------------------------------- |
+| Google Tag Manager                      | googletagmanager.com | 3 requests                      | `async`                           |
+| Google Analytics Universal (deprecated) | google-analytics.com | 1 request                       | `async`                           |
+| Google Analytics GA4 — property 1       | googletagmanager.com | via GTM                         | `async` via GTM                   |
+| Google Analytics GA4 — property 2       | googletagmanager.com | via GTM                         | `async` via GTM                   |
+| Google Maps API                         | maps.googleapis.com  | 3 requests (incl. sub-requests) | **synchronous, no defer**         |
+| DoubleClick / Google Ads (DC-8993070)   | doubleclick.net      | 0 scripts (iframe + beacon)     | deferred beacon                   |
+| Bootstrap CSS + JS                      | cdn.jsdelivr.net     | 2 requests                      | `<link>` / synchronous `<script>` |
 
 **Notable observations:**
+
 - **Google Analytics is duplicated.** The page loads the deprecated Universal Analytics library (`analytics.js` / UA-116902750-1) in addition to two separate GA4 tracking IDs (G-6JDRN6682Q and G-BHS8ENZZLM). Universal Analytics has been shut down by Google; this request adds unnecessary weight with no data benefit.
 - **Two separate GA4 properties.** Firing two GA4 measurement IDs on the same page is unusual. If both are intentional they should be confirmed as necessary; if either is redundant it should be removed.
 - **Google Maps API is synchronous and blocking.** The Maps embed script is loaded with no `defer` or `async`, which halts HTML parsing and blocks all rendering while the script downloads.
