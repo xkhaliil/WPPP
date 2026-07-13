@@ -82,7 +82,7 @@ The findings below combine rendering and networking issues into a single cleaned
    - **WISE rating:** Impact 3, Severity 3, Reach 4, Ease 3
    - **Final score:** 32/50, **Medium priority**
 
-### Ranked corrective backlog
+### Ranked corrective backlog (baseline findings only)
 
 1. **Images dominate the page payload**: 48/50
 2. **The homepage LCP element appears too late**: 46/50
@@ -168,6 +168,33 @@ The findings below combine rendering and networking issues into a single cleaned
 | 10   | Rendering work is more expensive than it should be           | 32/50 |
 | 10   | B5: Duplicate and deprecated analytics                       | 32/50 |
 
+---
+
+## Master Ranked Backlog (All Findings)
+
+This table merges all corrective findings across all audit rounds — baseline, bundle, coverage, flame chart, and layers.
+
+| Rank | ID | Finding | Score | Priority |
+|------|-----|---------|-------|----------|
+| 1  | —  | Images dominate the page payload | 48/50 | High |
+| 2  | B1 | JS delivered as 41 individual synchronous blocking files | 46/50 | High |
+| 2  | B3 | Images have no next-gen format, srcset, or lazy loading | 46/50 | High |
+| 2  | —  | The homepage LCP element appears too late | 46/50 | High |
+| 5  | C1 | No critical CSS inlined — @import chains delay first paint | 44/50 | High |
+| 6  | —  | Render-blocking CSS and font delivery delay the first visible paint | 42/50 | High |
+| 6  | B4 | Google Maps API loads synchronously, blocking the main thread | 42/50 | High |
+| 8  | —  | The homepage makes too many requests | 40/50 | High |
+| 8  | B2 | CSS fragmented across 94 @import-loaded files, no route splitting | 40/50 | High |
+| 8  | C2 | 87% of all CSS delivered to the browser is unused | 40/50 | High |
+| 11 | —  | Too much front-end code and too many separate JS/CSS files | 38/50 | Medium |
+| 12 | F1 | JS-driven parallax triggers a repaint on every scroll frame | 37/50 | Medium |
+| 13 | F2 | `transition: all` on 864 elements forces full style recalculation | 36/50 | Medium |
+| 14 | C3 | JS payload dominated by ~1,332 KB of analytics infrastructure | 34/50 | Medium |
+| 15 | —  | Rendering work is more expensive than it should be | 32/50 | Medium |
+| 15 | B5 | Duplicate and deprecated analytics (UA + 2× GA4) | 32/50 | Medium |
+| 17 | L1 | animate.css (72.5 KB) loaded but zero elements use it | 28/50 | Lower |
+| 18 | L2 | 11 forced GPU layers via `translateZ(0)` hack without purpose | 26/50 | Lower |
+
 ### Good findings
 
 1. **Layout stability is already strong.**
@@ -195,3 +222,97 @@ The findings below combine rendering and networking issues into a single cleaned
    - **Which metric(s) are being affected?** INP 100 ms and CLS 0.
    - **What is the cause, or most likely cause?** The page does not appear to suffer from major interaction delays or unstable layout movement during the measured mobile run.
    - **What is the solution, or a likely solution?** Keep protecting these strengths while optimizing load performance so improvements to speed do not introduce new instability.
+
+---
+
+## Coverage Findings
+
+### Corrective findings
+
+**C1. No critical CSS is extracted or inlined — the browser cannot render anything until all @import chains resolve.**
+
+- **How does this affect users?** Because zero render-critical styles are inlined in the HTML, the browser must complete at least two sequential network round-trips (fetch the wrapper `<style>` tag → fetch each `@import`-ed file) before it can paint a single pixel. On a slow mobile connection this is the direct cause of FCP 5.1 s and Speed Index 14.9 s.
+- **Which metric(s) are being affected?** FCP (5.1 s lab), Speed Index (14.9 s), and indirectly LCP.
+- **What is the cause?** Drupal 7 has no built-in critical-CSS extraction. The 11 inline `<style>` tags in the `<head>` are produced by Drupal's CSS aggregation system and contain only `@import` URLs — they hold no actual style rules. No `<link rel="preload">` hints compensate for this.
+- **What is the solution?** Extract the minimal above-the-fold CSS rules (primarily typography, layout skeleton, and header styles — roughly 5–10 KB) and inline them in a `<style>` tag. Move all remaining stylesheets to load asynchronously using `rel="preload"` + `onload` swap or the `media="print"` trick. This can be done with a Drupal module such as Critical CSS or as a post-processing step in a build pipeline.
+- **WISE rating:** Impact 5, Severity 5, Reach 5, Ease 2
+- **Final score:** 44/50, **High priority**
+
+---
+
+**C2. 87% of all CSS delivered to the browser is unused on the homepage.**
+
+- **How does this affect users?** The browser downloads, parses, and builds a CSSOM from 571 KB of stylesheets, of which 499 KB (87%) contains rules that do not match any element on the homepage. This parse work happens before the browser can render and directly inflates FCP and Total Blocking Time.
+- **Which metric(s) are being affected?** FCP (5.1 s lab), Speed Index (14.9 s), and Total Blocking Time (80 ms).
+- **What is the cause?**
+  - **Bootstrap 3.3.5** ships 144 KB of CSS; only 9.4 KB is matched on the homepage (93% waste). All carousel, modal, panel, and form component styles are downloaded even though those components are not on the homepage.
+  - **animate.css** (72.6 KB) is loaded by the Builder module but zero animation classes are applied to any homepage element — the entire file is dead weight.
+  - **Font Awesome is loaded twice** (theme copy 36.5 KB + Builder module copy 29.8 KB = 66.3 KB total) with only ~1.2 KB of icon rules matched.
+  - **Both Google Fonts families (Roboto and Open Sans) are 100% unused** on the homepage; their CSS `@import` requests spend bandwidth with no visual result.
+  - **responsive.css** contributes 28.3 KB of which 26.6 KB is unused.
+- **What is the solution?** Remove animate.css and both duplicate Font Awesome copies immediately. Replace the Google Fonts imports with self-hosted fonts scoped only to the families and weights that are actually used. Run PurgeCSS or a PostCSS uncss step against Bootstrap to ship only the components that appear on each page. Split the theme's `responsive.css` into per-breakpoint or per-page chunks.
+- **WISE rating:** Impact 4, Severity 4, Reach 5, Ease 3
+- **Final score:** 40/50, **High priority**
+
+---
+
+**C3. The JavaScript payload is dominated by analytics infrastructure that does not serve the user.**
+
+- **How does this affect users?** The three Google Tag Manager / gtag bundles together decode to approximately 1,332 KB — more than the entire image payload on the soft-refresh view. Even though these scripts are loaded `async`, they compete with first-party scripts for CPU time during the critical load window and on low-powered mobile devices they extend the period during which the main thread is busy.
+- **Which metric(s) are being affected?** Total Blocking Time, INP, and overall JS parse time.
+- **What is the cause?** Three separate gtag entry points are loaded (two GA4 properties plus a DoubleClick Floodlight tag), each pulling its own full copy of the gtag runtime. The deprecated `analytics.js` Universal Analytics library (51.1 KB) is also still present even though Universal Analytics data collection ended in 2023.
+- **What is the solution?** Consolidate all tracking under a single GTM container with a single gtag runtime. Remove `analytics.js` entirely. Evaluate whether both GA4 properties are necessary and remove redundant ones. Consider server-side tagging to move analytics payload off the client entirely.
+- **WISE rating:** Impact 3, Severity 3, Reach 5, Ease 3
+- **Final score:** 34/50, **Medium priority**
+
+---
+
+## Flame Chart and Frame Drop Findings
+
+### Corrective findings
+
+**F1. A JavaScript-driven parallax background triggers a repaint on every scroll frame.**
+
+- **How does this affect users?** During scrolling, the parallax section causes the browser to repaint rather than composite, which drops frames and makes the page feel janky on mid-range and low-end mobile devices. The field INP of 100 ms is still within the passing threshold, but this pattern directly threatens it under real-world scroll load.
+- **Which metric(s) are being affected?** INP (100 ms field), perceived scroll smoothness, and potentially CLS if repaints cause layout shifts.
+- **What is the cause?** The Builder module's `parallax_background.js` updates a `background-position` inline style on every scroll event. Changing `background-position` is not a compositor-only operation — it invalidates the paint record for the affected layer and forces a repaint each frame. The element's `background-attachment` is `scroll` (not `fixed`), confirming the JavaScript is doing manual repositioning without `will-change` or compositor promotion. Additionally, the scroll listener is not wrapped in `requestAnimationFrame`, so it can fire multiple times per frame on fast scrolls.
+- **What is the solution?** Replace the JavaScript parallax with a CSS-only approach using `background-attachment: fixed` (which the browser composites natively) or a `transform: translateY()` on a child element driven by a `requestAnimationFrame`-throttled listener. Alternatively, remove the parallax effect entirely for mobile viewports where it provides minimal visual benefit and maximum performance cost.
+- **WISE rating:** Impact 4, Severity 3, Reach 5, Ease 3
+- **Final score:** 37/50, **Medium priority**
+
+---
+
+**F2. `transition: all` is applied to 864 elements, forcing full style recalculation on every interaction.**
+
+- **How does this affect users?** Whenever any CSS property changes on any of the 864 affected elements — including on hover, focus, class toggle, or scroll-triggered class addition by the in-view library — the browser must re-evaluate every animatable CSS property on all 864 elements simultaneously. On mobile this manifests as a brief but perceptible stutter during navigation hover states and in-view reveals.
+- **Which metric(s) are being affected?** INP (100 ms), scroll smoothness, and interaction responsiveness.
+- **What is the cause?** The theme CSS (likely inherited from Bootstrap 3 or the `ontt` theme) applies a blanket `transition: all` rule. The Chrome coverage run found 864 elements with `transitionProperty === 'all'` at page load. `transition: all` is a known anti-pattern: it tells the browser to animate every property, which prevents the rendering pipeline from optimising which properties actually change.
+- **What is the solution?** Replace `transition: all` with explicit property declarations such as `transition: color 0.2s ease, background-color 0.2s ease` targeting only the properties that are actually animated. Audit the theme and Bootstrap overrides for the source rule and remove or narrow it. This is a pure CSS change with no visual regression risk if the specific properties are preserved.
+- **WISE rating:** Impact 3, Severity 3, Reach 5, Ease 4
+- **Final score:** 36/50, **Medium priority**
+
+---
+
+## Layers and Animations Findings
+
+### Corrective findings
+
+**L1. animate.css (72.5 KB) is fully loaded but no element on the homepage uses it.**
+
+- **How does this affect users?** The browser downloads and parses 72.5 KB of CSS animation keyframe definitions that produce zero visual output on the homepage. This is pure payload waste that delays CSSOM construction.
+- **Which metric(s) are being affected?** FCP, Speed Index, and total CSS weight.
+- **What is the cause?** The Drupal Builder module unconditionally loads `animate.css` as a module dependency on every page, regardless of whether any content block on that page uses animated entry effects. Chrome coverage confirmed 0.1 KB used out of 72.6 KB.
+- **What is the solution?** Configure the Builder module to load `animate.css` only on pages where animated blocks are present, or replace the blanket `@import` with a conditional attachment in the module's `.info` file. If animated blocks are not used on the site at all, remove the dependency entirely.
+- **WISE rating:** Impact 2, Severity 2, Reach 5, Ease 4
+- **Final score:** 28/50, **Lower priority**
+
+---
+
+**L2. Eleven elements use the `transform: translateZ(0)` GPU-promotion hack without a genuine rendering reason.**
+
+- **How does this affect users?** Each forced composite layer consumes GPU memory. On mobile devices with limited VRAM, excessive layers cause the GPU to thrash, which leads to dropped frames during scroll and animation. These 11 forced layers do not correspond to any animated element, so they provide no rendering benefit.
+- **Which metric(s) are being affected?** Scroll smoothness and memory pressure, particularly on low-end mobile.
+- **What is the cause?** Eleven elements carry an identity CSS transform (`transform: matrix(1,0,0,1,0,0)`) with no `will-change` property. This pattern — applying `transform: translate3d(0,0,0)` or `translateZ(0)` as a hack to force GPU compositing — was common in older jQuery-era theme code and libraries (such as bxslider and older Bootstrap versions). The transforms are identity matrices, meaning they have no visual effect but they do promote the elements to separate compositor layers.
+- **What is the solution?** Audit the theme CSS and slider library CSS for `transform: translateZ(0)` or `translate3d(0,0,0)` declarations not associated with actual animations. Remove the ones that are purely promotional hacks. For the slider, rely on the `transform: translate3d(x, 0, 0)` that is applied dynamically during slide transitions — this is legitimate — but remove any static identity transform that is added as a baseline style.
+- **WISE rating:** Impact 2, Severity 2, Reach 4, Ease 3
+- **Final score:** 26/50, **Lower priority**
