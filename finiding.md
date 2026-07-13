@@ -91,6 +91,78 @@ The findings below combine rendering and networking issues into a single cleaned
 5. **There is too much front-end code and too many separate CSS and JavaScript files**: 38/50
 6. **Rendering work is more expensive than it should be after resources arrive**: 32/50
 
+---
+
+## Bundle-Specific Findings
+
+### Corrective findings
+
+**B1. JavaScript is delivered as 41 individual synchronous render-blocking files with no bundling.**
+- **How does this affect users?** The browser cannot begin rendering any visible content until it has downloaded and executed every one of the 41 script files loaded in the `<head>`. On a slow mobile connection this adds a significant delay before the first pixel appears.
+- **Which metric(s) are being affected?** FCP (5.1 s lab), LCP (14.5 s lab), Speed Index (14.9 s), and Total Blocking Time (80 ms).
+- **What is the cause?** Drupal 7's JS aggregation is disabled or misconfigured. Every module ships its own JavaScript file and all of them are included unconditionally in the `<head>` with no `defer` or `async` attribute. Libraries that are only needed on specific pages — KolorTools (virtual tours), venobox, lightbox2, flexslider — are also loaded on the homepage. Bootstrap 3.3.5 JS is loaded twice: once from the CDN and once from the Drupal Bootstrap theme.
+- **What is the solution?** Enable Drupal's built-in JS aggregation to produce a small number of concatenated, minified bundles. Add `defer` to all scripts that do not need to run during initial parsing. Move page-specific libraries to be loaded only on the pages that require them. Remove the duplicate Bootstrap JS.
+- **WISE rating:** Impact 5, Severity 5, Reach 5, Ease 3
+- **Final score:** 46/50, **High priority**
+
+---
+
+**B2. CSS is fragmented across 94 @import-loaded files and is not split by route or component.**
+- **How does this affect users?** Because all 94 CSS files are discovered sequentially through `@import` chains, the browser cannot start downloading the inner files until it has already fetched the outer aggregated wrappers. This adds at least one extra network round-trip before render-critical styles are available, worsening FCP and perceived paint speed.
+- **Which metric(s) are being affected?** FCP (5.1 s lab), Speed Index (14.9 s), and the render-blocking resource audit in PageSpeed Insights.
+- **What is the cause?** Drupal 7's CSS aggregation is set to produce "aggregated" files that still use `@import` to pull in each module's CSS file individually, rather than fully merging and inlining the rules. Additionally, all module stylesheets are loaded on every page even when the corresponding module is not active, so there is no per-route scoping. Bootstrap 3.3.5 CSS is also loaded from an external CDN without a Subresource Integrity hash.
+- **What is the solution?** Disable `@import`-based aggregation and replace it with a build step (or a Drupal module such as Advanced CSS/JS Aggregation) that produces genuinely merged and minified CSS bundles. Audit each module's stylesheet and restrict loading to the pages where it is actually needed. Add an SRI hash to the CDN Bootstrap link, or self-host Bootstrap to remove the external dependency.
+- **WISE rating:** Impact 4, Severity 4, Reach 5, Ease 3
+- **Final score:** 40/50, **High priority**
+
+---
+
+**B3. Images have no next-gen format support, no responsive sizes, and no lazy loading.**
+- **How does this affect users?** Mobile users receive the same 1349×622-pixel JPEG files that desktop users receive, even though their viewport is less than 400 pixels wide. Most of the bytes downloaded for each hero image are wasted. No images below the fold are deferred, so the browser competes for bandwidth between visible and invisible images simultaneously.
+- **Which metric(s) are being affected?** LCP (14.5 s lab / 3.2 s field), FCP, Speed Index, and total page weight (images currently account for ~1.21 MiB of the 1.67 MiB cold-load transfer).
+- **What is the cause?** The Drupal theme serves all images with a single `src` URL and no `srcset`. Drupal image styles are used for thumbnail crops but are not configured to generate multiple responsive sizes or WebP/AVIF variants. No `loading="lazy"` attribute is applied to below-the-fold images, and no `fetchpriority="high"` is set on the LCP image.
+- **What is the solution?** Configure Drupal image styles to generate WebP variants alongside JPEG fallbacks and serve them using `<picture>` with `<source type="image/webp">`. Define at least two or three responsive width breakpoints for each image style so mobile devices receive smaller files. Add `loading="lazy"` to all below-the-fold images. Add `fetchpriority="high"` to the first hero/LCP image only.
+- **WISE rating:** Impact 5, Severity 5, Reach 5, Ease 3
+- **Final score:** 46/50, **High priority**
+
+---
+
+**B4. Google Maps API is loaded synchronously, blocking the main thread before it is visually needed.**
+- **How does this affect users?** The Google Maps script is loaded with a plain blocking `<script>` tag in the `<head>`, which pauses HTML parsing until the Maps library is fully downloaded and executed. The map widget is not visible above the fold, so this delay is paid before any user-facing content has rendered.
+- **Which metric(s) are being affected?** FCP, LCP, Speed Index, and Total Blocking Time.
+- **What is the cause?** The Drupal module responsible for embedding the Google Maps API places the script tag without a `defer` or `async` attribute. The embedded API key is also directly visible in the page HTML, which is a security concern if the key lacks API restrictions in Google Cloud Console.
+- **What is the solution?** Add `defer` to the Google Maps script tag so it loads in parallel with HTML parsing and executes after the document is parsed. Consider lazy-loading the map only when the user scrolls near the map widget. Verify that the Maps API key has appropriate HTTP referrer and API-level restrictions applied in Google Cloud Console.
+- **WISE rating:** Impact 4, Severity 4, Reach 5, Ease 4
+- **Final score:** 42/50, **High priority**
+
+---
+
+**B5. Duplicate and deprecated analytics tools waste third-party budget on every page load.**
+- **How does this affect users?** Loading three separate analytics tools (deprecated Universal Analytics `analytics.js`, plus two GA4 properties) means the browser makes additional network requests, parses more JavaScript, and sends more beacons on every page load. This is a recurring cost for every visitor even though Universal Analytics data is no longer being processed by Google.
+- **Which metric(s) are being affected?** Total network transfer, Total Blocking Time, and overall third-party payload.
+- **What is the cause?** When GA4 was adopted, the old Universal Analytics snippet was not removed. Two separate GA4 measurement IDs (G-6JDRN6682Q and G-BHS8ENZZLM) are also both active, suggesting either a migration artefact or an unreviewed duplication.
+- **What is the solution?** Remove the deprecated Universal Analytics snippet (`analytics.js` / UA-116902750-1) entirely. Audit the two GA4 properties and confirm whether both are intentional; remove or consolidate whichever is redundant. Consolidate all analytics firing through a single GTM container to keep third-party script count as low as possible.
+- **WISE rating:** Impact 2, Severity 2, Reach 5, Ease 5
+- **Final score:** 32/50, **Medium priority**
+
+---
+
+### Updated ranked corrective backlog (including bundle findings)
+
+| Rank | Finding | Score |
+|------|---------|-------|
+| 1 | Images dominate the page payload | 48/50 |
+| 2 | The homepage LCP element appears too late | 46/50 |
+| 2 | B1: JS is 41 individual synchronous blocking files | 46/50 |
+| 2 | B3: Images have no next-gen format, srcset, or lazy loading | 46/50 |
+| 5 | Render-blocking CSS and font delivery delay first paint | 42/50 |
+| 5 | B4: Google Maps API loads synchronously | 42/50 |
+| 7 | The homepage makes too many requests | 40/50 |
+| 7 | B2: CSS is 94 @import-loaded files with no route splitting | 40/50 |
+| 9 | There is too much front-end code and too many separate files | 38/50 |
+| 10 | Rendering work is more expensive than it should be | 32/50 |
+| 10 | B5: Duplicate and deprecated analytics | 32/50 |
+
 ### Good findings
 
 1. **Layout stability is already strong.**
