@@ -139,14 +139,14 @@ All images are JPEG or PNG — no WebP or AVIF. No `<img>` uses `srcset`. Hero i
 
 ### Third-Party Resources
 
-| Tool | Domain | Scripts | Load strategy |
-|------|---------|---------|---------------|
-| Google Tag Manager | googletagmanager.com | 3 requests | `async` |
-| Google Analytics Universal (deprecated) | google-analytics.com | 1 request | `async` |
-| Google Analytics GA4 (×2 properties) | googletagmanager.com | via GTM | `async` via GTM |
-| Google Maps API | maps.googleapis.com | 3 requests | **synchronous, blocking** |
-| DoubleClick / Google Ads | doubleclick.net | 0 (iframe + beacon) | deferred beacon |
-| Bootstrap CSS + JS | cdn.jsdelivr.net | 2 requests | `<link>` / blocking `<script>` |
+| Tool                                    | Domain               | Scripts             | Load strategy                  |
+| --------------------------------------- | -------------------- | ------------------- | ------------------------------ |
+| Google Tag Manager                      | googletagmanager.com | 3 requests          | `async`                        |
+| Google Analytics Universal (deprecated) | google-analytics.com | 1 request           | `async`                        |
+| Google Analytics GA4 (×2 properties)    | googletagmanager.com | via GTM             | `async` via GTM                |
+| Google Maps API                         | maps.googleapis.com  | 3 requests          | **synchronous, blocking**      |
+| DoubleClick / Google Ads                | doubleclick.net      | 0 (iframe + beacon) | deferred beacon                |
+| Bootstrap CSS + JS                      | cdn.jsdelivr.net     | 2 requests          | `<link>` / blocking `<script>` |
 
 Notable: the deprecated Universal Analytics snippet (`analytics.js`) is still loaded alongside two live GA4 properties. Google Maps is the only third-party that blocks rendering. Bootstrap CDN files carry no Subresource Integrity hash.
 
@@ -162,27 +162,28 @@ No critical CSS is extracted or inlined anywhere on the page. The 11 inline `<st
 
 Chrome DevTools coverage was collected over a full homepage load (desktop, unthrottled).
 
-| Metric | Value |
-|--------|-------|
-| Total CSS decoded | 571 KB |
-| CSS actually used | 72 KB |
-| **Unused CSS** | **499 KB (87%)** |
+| Metric            | Value            |
+| ----------------- | ---------------- |
+| Total CSS decoded | 571 KB           |
+| CSS actually used | 72 KB            |
+| **Unused CSS**    | **499 KB (87%)** |
 
 Top contributors to unused CSS by waste:
 
-| File | Total | Used | Waste |
-|------|-------|------|-------|
-| Bootstrap 3.3.5 (CDN) | 144 KB | 9.4 KB | 134.6 KB |
-| ontt.css (main theme) | 102.5 KB | 51 KB | 51.5 KB |
-| animate.css (Builder module) | 72.6 KB | 0.1 KB | 72.5 KB |
-| Google Fonts — Roboto | 42.2 KB | 0 KB | 42.2 KB |
-| Font Awesome (theme copy) | 36.5 KB | 0.6 KB | 35.9 KB |
-| Font Awesome (Builder copy) | 29.8 KB | 0.6 KB | 29.2 KB |
-| responsive.css (theme) | 28.3 KB | 1.7 KB | 26.6 KB |
-| Google Fonts — Open Sans | 22.7 KB | 0 KB | 22.7 KB |
-| drupal-bootstrap (CDN) | 15.9 KB | 1.1 KB | 14.8 KB |
+| File                         | Total    | Used   | Waste    |
+| ---------------------------- | -------- | ------ | -------- |
+| Bootstrap 3.3.5 (CDN)        | 144 KB   | 9.4 KB | 134.6 KB |
+| ontt.css (main theme)        | 102.5 KB | 51 KB  | 51.5 KB  |
+| animate.css (Builder module) | 72.6 KB  | 0.1 KB | 72.5 KB  |
+| Google Fonts — Roboto        | 42.2 KB  | 0 KB   | 42.2 KB  |
+| Font Awesome (theme copy)    | 36.5 KB  | 0.6 KB | 35.9 KB  |
+| Font Awesome (Builder copy)  | 29.8 KB  | 0.6 KB | 29.2 KB  |
+| responsive.css (theme)       | 28.3 KB  | 1.7 KB | 26.6 KB  |
+| Google Fonts — Open Sans     | 22.7 KB  | 0 KB   | 22.7 KB  |
+| drupal-bootstrap (CDN)       | 15.9 KB  | 1.1 KB | 14.8 KB  |
 
 Key observations:
+
 - **Bootstrap ships 134.6 KB of unused CSS** because only a small fraction of its grid and component rules match elements on the homepage.
 - **animate.css (72.5 KB waste)** is loaded by the Builder module but no elements on the homepage have animated classes applied — the library is dead weight.
 - **Font Awesome is loaded twice** (theme copy and Builder module copy), and together they waste ~65 KB; only ~1.2 KB of icon rules are matched.
@@ -192,16 +193,16 @@ Key observations:
 
 The JS file sizes recorded during the coverage run (2,807 KB decoded total) reflect the download cost, not execution coverage. Coverage execution data was unreliable for this site because most scripts execute once at page load before coverage listeners attach. However, the following specific libraries are observably unnecessary on the homepage based on DOM inspection:
 
-| Library | Size (decoded) | Reason it is unnecessary on the homepage |
-|---------|---------------|------------------------------------------|
-| animate.css driver / Builder animation | — | No animated elements present |
-| lightbox2 (`lightbox.js`) | 44.6 KB | No lightbox-linked images on homepage |
-| magnific-popup | 42.6 KB | Redundant with lightbox2; not triggered |
-| flexslider | — | bxslider handles the homepage slider |
-| KolorTools / KolorBootstrap | — | Virtual tour feature; no tour on homepage |
-| venobox | — | Video modal; not used on homepage |
-| `analytics.js` (UA deprecated) | 51.1 KB | UA shut down; data never processed |
-| Bootstrap JS (theme copy) | 67.3 KB | Duplicate of CDN Bootstrap JS |
+| Library                                | Size (decoded) | Reason it is unnecessary on the homepage  |
+| -------------------------------------- | -------------- | ----------------------------------------- |
+| animate.css driver / Builder animation | —              | No animated elements present              |
+| lightbox2 (`lightbox.js`)              | 44.6 KB        | No lightbox-linked images on homepage     |
+| magnific-popup                         | 42.6 KB        | Redundant with lightbox2; not triggered   |
+| flexslider                             | —              | bxslider handles the homepage slider      |
+| KolorTools / KolorBootstrap            | —              | Virtual tour feature; no tour on homepage |
+| venobox                                | —              | Video modal; not used on homepage         |
+| `analytics.js` (UA deprecated)         | 51.1 KB        | UA shut down; data never processed        |
+| Bootstrap JS (theme copy)              | 67.3 KB        | Duplicate of CDN Bootstrap JS             |
 
 The three Google Tag Manager / gtag bundles together account for approximately **1,332 KB decoded** (GTM container 359 KB + two gtag payloads ~496 KB + ~472 KB). This is the single largest JS cost on the page, driven entirely by analytics infrastructure.
 
@@ -214,7 +215,7 @@ The following observations are based on a DevTools Performance recording of the 
 ### Page load
 
 - The browser encounters 37 synchronous, non-deferred `<script>` tags in the `<head>` before it can render anything. Each one pauses the HTML parser. This creates a single extended Long Task during early page load that covers most of the time between TTFB and FCP.
-- The Google Maps API itself emits a console warning: *"Google Maps JavaScript API has been loaded directly without `loading=async`. This can result in suboptimal performance."* — confirming the blocking load pattern.
+- The Google Maps API itself emits a console warning: _"Google Maps JavaScript API has been loaded directly without `loading=async`. This can result in suboptimal performance."_ — confirming the blocking load pattern.
 - Script parse and execution for jQuery, Bootstrap, and the slider libraries all occur inside this blocking window.
 
 ### Scroll performance
@@ -252,13 +253,13 @@ The following observations are based on a DevTools Performance recording of the 
 
 ### Summary of animation triggers
 
-| Animation | Trigger type | Compositor-safe? |
-|-----------|-------------|-----------------|
-| bxslider slide transition | `transform: translate3d` | Yes |
-| Parallax background scroll | JS inline style → `background-position` | No — forces repaint |
-| Hover/focus transitions | `transition: all` (864 elements) | No — forces style recalc |
-| Fade-in on scroll | CSS `opacity` (via `transition: all`) | Partially — opacity is safe but `transition: all` is not |
-| Forced GPU layers (×11) | `transform: translateZ(0)` hack | Unnecessary — promotes layers without purpose |
+| Animation                  | Trigger type                            | Compositor-safe?                                         |
+| -------------------------- | --------------------------------------- | -------------------------------------------------------- |
+| bxslider slide transition  | `transform: translate3d`                | Yes                                                      |
+| Parallax background scroll | JS inline style → `background-position` | No — forces repaint                                      |
+| Hover/focus transitions    | `transition: all` (864 elements)        | No — forces style recalc                                 |
+| Fade-in on scroll          | CSS `opacity` (via `transition: all`)   | Partially — opacity is safe but `transition: all` is not |
+| Forced GPU layers (×11)    | `transform: translateZ(0)` hack         | Unnecessary — promotes layers without purpose            |
 
 **How CSS is bundled:**
 The site uses two strategies in parallel. Two CDN-hosted CSS files are loaded as `<link>` tags (Bootstrap 3.3.5 from `cdn.jsdelivr.net` and the Drupal Bootstrap companion styles from the same CDN). Drupal 7's optional CSS aggregation has created aggregated wrapper files that use `@import` to pull in individual module CSS files at runtime, resulting in 94 additional CSS resources loaded via `@import`.

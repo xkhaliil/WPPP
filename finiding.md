@@ -174,26 +174,26 @@ The findings below combine rendering and networking issues into a single cleaned
 
 This table merges all corrective findings across all audit rounds — baseline, bundle, coverage, flame chart, and layers.
 
-| Rank | ID | Finding | Score | Priority |
-|------|-----|---------|-------|----------|
-| 1  | —  | Images dominate the page payload | 48/50 | High |
-| 2  | B1 | JS delivered as 41 individual synchronous blocking files | 46/50 | High |
-| 2  | B3 | Images have no next-gen format, srcset, or lazy loading | 46/50 | High |
-| 2  | —  | The homepage LCP element appears too late | 46/50 | High |
-| 5  | C1 | No critical CSS inlined — @import chains delay first paint | 44/50 | High |
-| 6  | —  | Render-blocking CSS and font delivery delay the first visible paint | 42/50 | High |
-| 6  | B4 | Google Maps API loads synchronously, blocking the main thread | 42/50 | High |
-| 8  | —  | The homepage makes too many requests | 40/50 | High |
-| 8  | B2 | CSS fragmented across 94 @import-loaded files, no route splitting | 40/50 | High |
-| 8  | C2 | 87% of all CSS delivered to the browser is unused | 40/50 | High |
-| 11 | —  | Too much front-end code and too many separate JS/CSS files | 38/50 | Medium |
-| 12 | F1 | JS-driven parallax triggers a repaint on every scroll frame | 37/50 | Medium |
-| 13 | F2 | `transition: all` on 864 elements forces full style recalculation | 36/50 | Medium |
-| 14 | C3 | JS payload dominated by ~1,332 KB of analytics infrastructure | 34/50 | Medium |
-| 15 | —  | Rendering work is more expensive than it should be | 32/50 | Medium |
-| 15 | B5 | Duplicate and deprecated analytics (UA + 2× GA4) | 32/50 | Medium |
-| 17 | L1 | animate.css (72.5 KB) loaded but zero elements use it | 28/50 | Lower |
-| 18 | L2 | 11 forced GPU layers via `translateZ(0)` hack without purpose | 26/50 | Lower |
+| Rank | ID  | Finding                                                             | Score | Priority |
+| ---- | --- | ------------------------------------------------------------------- | ----- | -------- |
+| 1    | —   | Images dominate the page payload                                    | 48/50 | High     |
+| 2    | B1  | JS delivered as 41 individual synchronous blocking files            | 46/50 | High     |
+| 2    | B3  | Images have no next-gen format, srcset, or lazy loading             | 46/50 | High     |
+| 2    | —   | The homepage LCP element appears too late                           | 46/50 | High     |
+| 5    | C1  | No critical CSS inlined — @import chains delay first paint          | 44/50 | High     |
+| 6    | —   | Render-blocking CSS and font delivery delay the first visible paint | 42/50 | High     |
+| 6    | B4  | Google Maps API loads synchronously, blocking the main thread       | 42/50 | High     |
+| 8    | —   | The homepage makes too many requests                                | 40/50 | High     |
+| 8    | B2  | CSS fragmented across 94 @import-loaded files, no route splitting   | 40/50 | High     |
+| 8    | C2  | 87% of all CSS delivered to the browser is unused                   | 40/50 | High     |
+| 11   | —   | Too much front-end code and too many separate JS/CSS files          | 38/50 | Medium   |
+| 12   | F1  | JS-driven parallax triggers a repaint on every scroll frame         | 37/50 | Medium   |
+| 13   | F2  | `transition: all` on 864 elements forces full style recalculation   | 36/50 | Medium   |
+| 14   | C3  | JS payload dominated by ~1,332 KB of analytics infrastructure       | 34/50 | Medium   |
+| 15   | —   | Rendering work is more expensive than it should be                  | 32/50 | Medium   |
+| 15   | B5  | Duplicate and deprecated analytics (UA + 2× GA4)                    | 32/50 | Medium   |
+| 17   | L1  | animate.css (72.5 KB) loaded but zero elements use it               | 28/50 | Lower    |
+| 18   | L2  | 11 forced GPU layers via `translateZ(0)` hack without purpose       | 26/50 | Lower    |
 
 ### Good findings
 
