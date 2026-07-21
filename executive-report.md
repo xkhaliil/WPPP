@@ -1,4 +1,5 @@
 # Discover Tunisia — Performance Audit
+
 ## Executive Briefing
 
 **Site:** discovertunisia.com  
@@ -33,13 +34,13 @@ Open discovertunisia.com on a mobile device using a cellular data connection —
 
 A report that lists only failures is a hostile document, and a defensive reader does not act on recommendations. The site has real strengths worth acknowledging — and worth protecting if optimization work begins.
 
-| Area | Measurement | What it means in practice |
-| --- | --- | --- |
-| **Search visibility** | SEO score: 100 / 100 | The site is correctly structured for Google indexing. This is difficult to preserve after major rebuilds and should be treated as a hard constraint on any future work. |
-| **Layout stability** | CLS: 0 (perfect score) | Nothing shifts or jumps unexpectedly as the page loads. Users are not accidentally tapping the wrong element. A CLS of zero is uncommon on content-heavy pages. |
-| **Responsiveness to taps** | INP: 100 ms (passing) | When a user taps a button or link, the site responds quickly. Interactive elements are not the bottleneck. |
-| **Security and best practices** | Best Practices: 96 / 100 | The site follows current browser security guidance. |
-| **Repeat visit speed** | 33% less data transferred on second visit | The server caching layer works for returning visitors. Someone who reloads the homepage gets a noticeably lighter page. |
+| Area                            | Measurement                               | What it means in practice                                                                                                                                               |
+| ------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Search visibility**           | SEO score: 100 / 100                      | The site is correctly structured for Google indexing. This is difficult to preserve after major rebuilds and should be treated as a hard constraint on any future work. |
+| **Layout stability**            | CLS: 0 (perfect score)                    | Nothing shifts or jumps unexpectedly as the page loads. Users are not accidentally tapping the wrong element. A CLS of zero is uncommon on content-heavy pages.         |
+| **Responsiveness to taps**      | INP: 100 ms (passing)                     | When a user taps a button or link, the site responds quickly. Interactive elements are not the bottleneck.                                                              |
+| **Security and best practices** | Best Practices: 96 / 100                  | The site follows current browser security guidance.                                                                                                                     |
+| **Repeat visit speed**          | 33% less data transferred on second visit | The server caching layer works for returning visitors. Someone who reloads the homepage gets a noticeably lighter page.                                                 |
 
 These are meaningful. The goal of any optimization work should be to improve the failing areas without disturbing these passing ones.
 
@@ -68,11 +69,11 @@ The hero image on the homepage is controlled by three separate JavaScript animat
 
 > Google scores pages on a 0–100 scale. Below 50 is "Poor" (red). Between 50 and 89 is "Needs Improvement" (orange). Above 90 is "Good" (green). The site currently has no pages in the green band on mobile.
 
-| Page | Mobile Score | Google's Band |
-| --- | --- | --- |
-| La Tunisie toute l'annee | **47** | 🔴 Poor |
-| Tunisia Live | **52** | 🟠 Needs Improvement |
-| Homepage | **56** | 🟠 Needs Improvement |
+| Page                     | Mobile Score | Google's Band        |
+| ------------------------ | ------------ | -------------------- |
+| La Tunisie toute l'annee | **47**       | 🔴 Poor              |
+| Tunisia Live             | **52**       | 🟠 Needs Improvement |
+| Homepage                 | **56**       | 🟠 Needs Improvement |
 
 **Why this affects search ranking:**  
 Google confirmed in 2021 that Core Web Vitals — the measurements behind these scores — are a ranking signal in Search. A page that consistently fails these measurements may rank lower than a competing page that passes them, assuming content quality is otherwise comparable. For a tourism content site competing on destination search terms ("things to do in Tunisia", "Tunisia beaches", etc.), a red or orange performance score is a direct structural disadvantage against competitors whose pages score green.
@@ -105,12 +106,12 @@ None of these were deliberate choices. They are the accumulated result of plugin
 
 ## The Risk of Inaction
 
-| Risk | Current status | Potential consequence |
-| --- | --- | --- |
-| **Search ranking** | Core Web Vitals: **Failed**. Google's ranking signal is active. | Reduced organic visibility for destination search terms; increased dependence on paid acquisition to maintain traffic. |
-| **Mobile abandonment** | LCP at 3.2 s — at the industry abandonment threshold | A measurable share of mobile visitors leave before seeing any destination content. |
-| **Competitive disadvantage** | No pages pass the green band; competing tourism sites that do pass will rank above equivalent pages | Structural and growing. Competitors investing in performance gain ground that is increasingly expensive to recover. |
-| **Technical debt compounding** | Each new plugin or module adds to the weight with no counterbalancing audit | Future optimization becomes more expensive. The longer the delay, the larger the remediation scope. |
+| Risk                           | Current status                                                                                      | Potential consequence                                                                                                  |
+| ------------------------------ | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **Search ranking**             | Core Web Vitals: **Failed**. Google's ranking signal is active.                                     | Reduced organic visibility for destination search terms; increased dependence on paid acquisition to maintain traffic. |
+| **Mobile abandonment**         | LCP at 3.2 s — at the industry abandonment threshold                                                | A measurable share of mobile visitors leave before seeing any destination content.                                     |
+| **Competitive disadvantage**   | No pages pass the green band; competing tourism sites that do pass will rank above equivalent pages | Structural and growing. Competitors investing in performance gain ground that is increasingly expensive to recover.    |
+| **Technical debt compounding** | Each new plugin or module adds to the weight with no counterbalancing audit                         | Future optimization becomes more expensive. The longer the delay, the larger the remediation scope.                    |
 
 ---
 
@@ -121,43 +122,46 @@ The findings in this audit group naturally into three tiers. The ranking reflect
 ---
 
 ### Tier 1 — High impact, low structural risk
-*Configuration changes and asset cleanup. No redesign. No new platform.*  
+
+_Configuration changes and asset cleanup. No redesign. No new platform._  
 **Recommended timeline: start immediately.**
 
-| Action | Business outcome | Honest effort |
-| --- | --- | --- |
-| **Enable server-side page caching** | Cuts the 1.0-second server response delay to under 0.1 seconds for all anonymous visitors. A configuration change, not a code change. | 1–2 days |
-| **Compress and resize images for mobile** | Images are 73% of what visitors download. Modern formats and mobile-appropriate sizes reduce page weight by an estimated 60–70% on mobile devices. | 1–2 weeks |
-| **Remove unused code and dead libraries** | Eliminates the animation library, the virtual-tour script, the duplicate lightbox tool, and the deprecated analytics snippet — together several hundred kilobytes removed from every page load. | 3–5 days |
-| **Prioritise the La Tunisie toute l'annee page** | Red score (47) on a high-value destination page. Include in the same scope as the homepage to move both pages out of the red band. | Covered by the above actions |
+| Action                                           | Business outcome                                                                                                                                                                                | Honest effort                |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| **Enable server-side page caching**              | Cuts the 1.0-second server response delay to under 0.1 seconds for all anonymous visitors. A configuration change, not a code change.                                                           | 1–2 days                     |
+| **Compress and resize images for mobile**        | Images are 73% of what visitors download. Modern formats and mobile-appropriate sizes reduce page weight by an estimated 60–70% on mobile devices.                                              | 1–2 weeks                    |
+| **Remove unused code and dead libraries**        | Eliminates the animation library, the virtual-tour script, the duplicate lightbox tool, and the deprecated analytics snippet — together several hundred kilobytes removed from every page load. | 3–5 days                     |
+| **Prioritise the La Tunisie toute l'annee page** | Red score (47) on a high-value destination page. Include in the same scope as the homepage to move both pages out of the red band.                                                              | Covered by the above actions |
 
 **Expected outcome from Tier 1:** Page weight reduction of approximately 50%, TTFB improvement from 1.0 s to under 0.1 s, improved scores across all audited pages.
 
 ---
 
 ### Tier 2 — High impact, moderate development effort
-*Requires front-end development work. No platform change required.*  
+
+_Requires front-end development work. No platform change required._  
 **Recommended timeline: following Tier 1.**
 
-| Action | Business outcome | Honest effort |
-| --- | --- | --- |
-| **Display the first hero image without depending on JavaScript** | The most direct fix for the slow LCP. The first slide becomes immediately visible on page load, before any script runs. | 1–2 weeks |
-| **Tell the browser to prioritise the hero image** | A one-line addition that signals the browser to load the most important visual first. Disproportionate impact for minimal effort. | 1–2 days |
-| **Defer the Google Maps script** | Maps currently blocks the entire page from rendering, even on pages where no map is visible. Moving it to load after the page is displayed removes the blockage. | 1–2 days |
-| **Consolidate three carousel libraries into one** | Removes conflicting code and reduces the script overhead for every page that uses a slider. | 1–2 weeks |
+| Action                                                           | Business outcome                                                                                                                                                 | Honest effort |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| **Display the first hero image without depending on JavaScript** | The most direct fix for the slow LCP. The first slide becomes immediately visible on page load, before any script runs.                                          | 1–2 weeks     |
+| **Tell the browser to prioritise the hero image**                | A one-line addition that signals the browser to load the most important visual first. Disproportionate impact for minimal effort.                                | 1–2 days      |
+| **Defer the Google Maps script**                                 | Maps currently blocks the entire page from rendering, even on pages where no map is visible. Moving it to load after the page is displayed removes the blockage. | 1–2 days      |
+| **Consolidate three carousel libraries into one**                | Removes conflicting code and reduces the script overhead for every page that uses a slider.                                                                      | 1–2 weeks     |
 
 **Expected outcome from Tier 2:** LCP should move below 2.5 seconds (Google's "Good" threshold), FCP improvement, potential Core Web Vitals pass on the homepage.
 
 ---
 
 ### Tier 3 — Structural improvements
-*Platform-level decisions. Higher cost and longer timeline, but addresses root causes.*  
+
+_Platform-level decisions. Higher cost and longer timeline, but addresses root causes._  
 **Recommended timeline: medium-term planning.**
 
-| Action | Business outcome | Honest effort |
-| --- | --- | --- |
-| **Audit and retire inactive Drupal modules** | The CSS and JavaScript bloat originates largely from active modules that load their assets on every page regardless of whether the module is in use. Removing unused modules is the cleanest long-term solution. | 2–4 weeks |
-| **Add a CDN or edge delivery layer** | Reduces load time globally rather than just at the server origin. Protects against traffic spikes and improves experience for international visitors. | 1–2 weeks (infrastructure) |
+| Action                                       | Business outcome                                                                                                                                                                                                 | Honest effort              |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| **Audit and retire inactive Drupal modules** | The CSS and JavaScript bloat originates largely from active modules that load their assets on every page regardless of whether the module is in use. Removing unused modules is the cleanest long-term solution. | 2–4 weeks                  |
+| **Add a CDN or edge delivery layer**         | Reduces load time globally rather than just at the server origin. Protects against traffic spikes and improves experience for international visitors.                                                            | 1–2 weeks (infrastructure) |
 
 ---
 
@@ -177,16 +181,16 @@ Server caching costs almost nothing to implement and eliminates a 1.0-second del
 
 ## Summary
 
-| Finding | Business risk | Tier | Effort |
-| --- | --- | --- | --- |
-| Hero image takes 3+ seconds on mobile | User abandonment, LCP failure | 2 | Medium |
-| La Tunisie toute l'annee scores red (47) | Search ranking disadvantage | 1 | Low–Medium |
-| 1.67 MB page weight, 73% images | Data cost, slow load, LCP impact | 1 | Low–Medium |
-| Server regenerates every page from scratch | Unnecessary 1.0 s delay on every visit | 1 | Low |
-| Unused libraries loaded on every page | Wasted load time, maintenance overhead | 1 | Low |
-| Google Maps blocks page rendering | FCP and LCP delay | 2 | Low |
-| Deprecated analytics tool still running | Wasted third-party budget, redundant data | 1 | Low |
+| Finding                                    | Business risk                             | Tier | Effort     |
+| ------------------------------------------ | ----------------------------------------- | ---- | ---------- |
+| Hero image takes 3+ seconds on mobile      | User abandonment, LCP failure             | 2    | Medium     |
+| La Tunisie toute l'annee scores red (47)   | Search ranking disadvantage               | 1    | Low–Medium |
+| 1.67 MB page weight, 73% images            | Data cost, slow load, LCP impact          | 1    | Low–Medium |
+| Server regenerates every page from scratch | Unnecessary 1.0 s delay on every visit    | 1    | Low        |
+| Unused libraries loaded on every page      | Wasted load time, maintenance overhead    | 1    | Low        |
+| Google Maps blocks page rendering          | FCP and LCP delay                         | 2    | Low        |
+| Deprecated analytics tool still running    | Wasted third-party budget, redundant data | 1    | Low        |
 
 ---
 
-*All metrics were measured using Google PageSpeed Insights (mobile, Emulated Moto G Power, Slow 4G throttling) and Google Chrome DevTools. Field data (LCP, INP, CLS, FCP, TTFB) comes from the Chrome User Experience Report — real measurements from real users visiting the site. Audit date: July 2026.*
+_All metrics were measured using Google PageSpeed Insights (mobile, Emulated Moto G Power, Slow 4G throttling) and Google Chrome DevTools. Field data (LCP, INP, CLS, FCP, TTFB) comes from the Chrome User Experience Report — real measurements from real users visiting the site. Audit date: July 2026._
