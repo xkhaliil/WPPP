@@ -123,28 +123,28 @@ The findings below combine rendering and networking issues into a single cleaned
 
 ### Updated ranked corrective backlog (including rendering strategy findings)
 
-| Rank | ID  | Finding | Score |
-| ---- | --- | ------- | ----- |
-| 1    | —   | Images dominate the page payload | 48/50 |
-| 2    | B1  | JS delivered as 41 individual synchronous blocking files | 46/50 |
-| 2    | B3  | Images have no next-gen format, srcset, or lazy loading | 46/50 |
-| 2    | —   | The homepage LCP element appears too late | 46/50 |
-| 2    | RS1 | Hero carousel is CSR-dependent — LCP gated behind JS execution | 46/50 |
-| 6    | C1  | No critical CSS inlined — @import chains delay first paint | 44/50 |
+| Rank | ID  | Finding                                                             | Score |
+| ---- | --- | ------------------------------------------------------------------- | ----- |
+| 1    | —   | Images dominate the page payload                                    | 48/50 |
+| 2    | B1  | JS delivered as 41 individual synchronous blocking files            | 46/50 |
+| 2    | B3  | Images have no next-gen format, srcset, or lazy loading             | 46/50 |
+| 2    | —   | The homepage LCP element appears too late                           | 46/50 |
+| 2    | RS1 | Hero carousel is CSR-dependent — LCP gated behind JS execution      | 46/50 |
+| 6    | C1  | No critical CSS inlined — @import chains delay first paint          | 44/50 |
 | 7    | —   | Render-blocking CSS and font delivery delay the first visible paint | 42/50 |
-| 7    | B4  | Google Maps API loads synchronously, blocking the main thread | 42/50 |
-| 7    | RS2 | Dynamic uncached SSR on every request produces 1.0 s TTFB | 42/50 |
-| 10   | —   | The homepage makes too many requests | 40/50 |
-| 10   | B2  | CSS fragmented across 94 @import-loaded files, no route splitting | 40/50 |
-| 10   | C2  | 87% of all CSS delivered to the browser is unused | 40/50 |
-| 13   | —   | Too much front-end code and too many separate JS/CSS files | 38/50 |
-| 14   | F1  | JS-driven parallax triggers a repaint on every scroll frame | 37/50 |
-| 15   | F2  | `transition: all` on 864 elements forces full style recalculation | 36/50 |
-| 16   | C3  | JS payload dominated by ~1,332 KB of analytics infrastructure | 34/50 |
-| 17   | —   | Rendering work is more expensive than it should be | 32/50 |
-| 17   | B5  | Duplicate and deprecated analytics (UA + 2× GA4) | 32/50 |
-| 19   | L1  | animate.css (72.5 KB) loaded but zero elements use it | 28/50 |
-| 20   | L2  | 11 forced GPU layers via `translateZ(0)` hack without purpose | 26/50 |
+| 7    | B4  | Google Maps API loads synchronously, blocking the main thread       | 42/50 |
+| 7    | RS2 | Dynamic uncached SSR on every request produces 1.0 s TTFB           | 42/50 |
+| 10   | —   | The homepage makes too many requests                                | 40/50 |
+| 10   | B2  | CSS fragmented across 94 @import-loaded files, no route splitting   | 40/50 |
+| 10   | C2  | 87% of all CSS delivered to the browser is unused                   | 40/50 |
+| 13   | —   | Too much front-end code and too many separate JS/CSS files          | 38/50 |
+| 14   | F1  | JS-driven parallax triggers a repaint on every scroll frame         | 37/50 |
+| 15   | F2  | `transition: all` on 864 elements forces full style recalculation   | 36/50 |
+| 16   | C3  | JS payload dominated by ~1,332 KB of analytics infrastructure       | 34/50 |
+| 17   | —   | Rendering work is more expensive than it should be                  | 32/50 |
+| 17   | B5  | Duplicate and deprecated analytics (UA + 2× GA4)                    | 32/50 |
+| 19   | L1  | animate.css (72.5 KB) loaded but zero elements use it               | 28/50 |
+| 20   | L2  | 11 forced GPU layers via `translateZ(0)` hack without purpose       | 26/50 |
 
 ---
 
@@ -239,7 +239,7 @@ This table merges all corrective findings across all audit rounds — baseline, 
 | 6    | C1  | No critical CSS inlined — @import chains delay first paint          | 44/50 | High     |
 | 7    | —   | Render-blocking CSS and font delivery delay the first visible paint | 42/50 | High     |
 | 7    | B4  | Google Maps API loads synchronously, blocking the main thread       | 42/50 | High     |
-| 7    | RS2 | Dynamic uncached SSR on every request produces 1.0 s TTFB          | 42/50 | High     |
+| 7    | RS2 | Dynamic uncached SSR on every request produces 1.0 s TTFB           | 42/50 | High     |
 | 10   | —   | The homepage makes too many requests                                | 40/50 | High     |
 | 10   | B2  | CSS fragmented across 94 @import-loaded files, no route splitting   | 40/50 | High     |
 | 10   | C2  | 87% of all CSS delivered to the browser is unused                   | 40/50 | High     |

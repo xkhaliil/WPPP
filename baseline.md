@@ -91,28 +91,31 @@ The site is built on Drupal 7, a traditional PHP CMS. Every page is assembled se
 
 ### Rendering strategy per page
 
-| Page | Primary rendering strategy | Client-side additions | Notes |
-| ---- | -------------------------- | --------------------- | ----- |
-| Homepage (`/`) | Server-side rendering (Drupal 7 PHP) | JS-driven hero carousel (bxslider / flexslider / views_slideshow), parallax script, two lightbox libraries | The LCP element is inside a JavaScript-driven carousel — it is not visible until all carousel scripts have loaded and executed |
-| Tunisia Live (`/tunisia-live`) | Server-side rendering + third-party iframes | YouTube / embedded video iframes rendered client-side by the third party | The iframe content is controlled by an external origin and adds a separate round-trip and render cycle |
-| Contact (`/contact`) | Server-side rendering | Client-side form validation JS | Closest to a pure SSR use case; form is rendered in full before any JS runs |
-| Decouvrir (`/decouvrir`) | Server-side rendering | JS sliders, lightbox | Content hub; content rarely changes but is regenerated on every anonymous request |
-| La Tunisie toute l'annee (`/la-tunisie-toute-lannee`) | Server-side rendering | JS-driven image layouts | Worst-performing page (PSI mobile score 47); shares the same rendering patterns as the homepage |
-| Media Center (`/medias`) | Server-side rendering | Lightbox JS, likely gallery scripts | Image-heavy gallery; entire media grid is likely loaded and painted at once without lazy loading |
-| Evenements (`/evenements`) | Server-side rendering | Likely calendar or listing JS | Content listing; the page shell is effectively static between updates |
-| Carthage et Sidi Bou Said (`/decouvrir/carthage-et-sidi-bou-said`) | Server-side rendering | JS sliders, lightbox | Deep destination content; representative of all destination detail pages |
+| Page                                                               | Primary rendering strategy                  | Client-side additions                                                                                      | Notes                                                                                                                          |
+| ------------------------------------------------------------------ | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Homepage (`/`)                                                     | Server-side rendering (Drupal 7 PHP)        | JS-driven hero carousel (bxslider / flexslider / views_slideshow), parallax script, two lightbox libraries | The LCP element is inside a JavaScript-driven carousel — it is not visible until all carousel scripts have loaded and executed |
+| Tunisia Live (`/tunisia-live`)                                     | Server-side rendering + third-party iframes | YouTube / embedded video iframes rendered client-side by the third party                                   | The iframe content is controlled by an external origin and adds a separate round-trip and render cycle                         |
+| Contact (`/contact`)                                               | Server-side rendering                       | Client-side form validation JS                                                                             | Closest to a pure SSR use case; form is rendered in full before any JS runs                                                    |
+| Decouvrir (`/decouvrir`)                                           | Server-side rendering                       | JS sliders, lightbox                                                                                       | Content hub; content rarely changes but is regenerated on every anonymous request                                              |
+| La Tunisie toute l'annee (`/la-tunisie-toute-lannee`)              | Server-side rendering                       | JS-driven image layouts                                                                                    | Worst-performing page (PSI mobile score 47); shares the same rendering patterns as the homepage                                |
+| Media Center (`/medias`)                                           | Server-side rendering                       | Lightbox JS, likely gallery scripts                                                                        | Image-heavy gallery; entire media grid is likely loaded and painted at once without lazy loading                               |
+| Evenements (`/evenements`)                                         | Server-side rendering                       | Likely calendar or listing JS                                                                              | Content listing; the page shell is effectively static between updates                                                          |
+| Carthage et Sidi Bou Said (`/decouvrir/carthage-et-sidi-bou-said`) | Server-side rendering                       | JS sliders, lightbox                                                                                       | Deep destination content; representative of all destination detail pages                                                       |
 
 ### How the rendering strategy affects users and key tradeoffs
 
 **Server-side rendering (the overall architecture):**
+
 - **Benefit:** The browser receives a fully-formed HTML document that search engines can crawl and index immediately. This is why the site's SEO score is 100 on the homepage. It also means content is accessible without JavaScript, which benefits screen readers and low-end devices.
 - **Tradeoff:** TTFB is 1.0 s on mobile, which is high for a largely static tourism content site. This indicates that Drupal is regenerating the full page on every anonymous request with no page-level output cache. On Slow 4G this means a 1-second gap before the browser receives a single byte of HTML, which directly delays FCP and LCP.
 
 **Client-side carousel rendering (homepage and destination pages):**
+
 - **The problem:** The most visible content on the homepage — the hero carousel — is controlled by JavaScript. The initial HTML contains the carousel markup, but the images are not displayed as plain static elements; they are sized, positioned, and animated by bxslider, flexslider, and views_slideshow. Until those scripts load and execute, the carousel is either in a broken layout state or not visible at all. The LCP element is therefore gated behind the full JS execution chain.
 - **Tradeoff:** A JS-driven carousel enables smooth transitions and touch support. The cost is that the LCP is delayed by the complete render-blocking script loading pipeline, which is the primary reason lab LCP reaches 14.5 s. Three competing carousel libraries are loaded to do the job of one.
 
 **Third-party iframe rendering (Tunisia Live):**
+
 - **The problem:** Embedded video iframes trigger a second independent rendering pipeline in the browser. The iframe must complete its own DNS lookup, TCP connection, and HTML fetch to a third-party origin before it can render. This adds to perceived load time and can cause layout shift if the iframe dimensions are not reserved in CSS before the iframe loads.
 - **Tradeoff:** Iframes are the standard embed mechanism for third-party video. The performance cost can be substantially reduced by using a facade — a server-rendered static poster image with a play button that loads the real iframe only on user interaction.
 
