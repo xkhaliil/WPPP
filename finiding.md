@@ -93,6 +93,61 @@ The findings below combine rendering and networking issues into a single cleaned
 
 ---
 
+## Rendering Strategy Findings
+
+### Corrective findings
+
+**RS1. The homepage hero carousel is rendered client-side by JavaScript, making the LCP element JS-dependent.**
+
+- **How does this affect users?** The most prominent visual element on the page — the hero carousel — is not visible until three competing JavaScript carousel libraries have loaded and executed. On a slow mobile connection this means the above-the-fold area is blank or in a broken layout state for the entire duration of the JS loading chain. The lab LCP of 14.5 s and the field LCP of 3.2 s are both rooted directly in this decision. Users on Slow 4G perceive the page as empty for an unacceptably long time even though the server delivered a fully-formed HTML document.
+- **Which metric(s) are being affected?** LCP (14.5 s lab / 3.2 s field), FCP (5.1 s lab), Speed Index (14.9 s).
+- **What is the cause?** The Drupal theme uses three JS carousel plugins (bxslider, flexslider, views_slideshow) to manage the hero. The first slide is only visible after the carousel JS has initialized and run, which happens after all render-blocking scripts in `<head>` have been downloaded and executed. The HTML markup for the carousel is present in the SSR output, but without the carousel JS the images are either hidden or unstyled — so SSR's advantage of delivering content immediately is negated at exactly the most visible point on the page.
+- **What is the solution?** Render the first hero slide as a plain server-side HTML `<img>` element that is immediately visible without any JavaScript. Add `fetchpriority="high"` to that image. Use JavaScript only to add slide navigation for subsequent frames, and load it with `defer`. Remove two of the three carousel libraries and consolidate onto one.
+- **Is this the best rendering choice?** No. The first slide's content is fully static and known at request time. There is no reason for it to depend on JavaScript for its initial display. Server-rendered first slide with JS-enhanced interactivity is the correct pattern.
+- **WISE rating:** Impact 5, Severity 5, Reach 5, Ease 3
+- **Final score:** 46/50, **High priority**
+
+---
+
+**RS2. Drupal 7 serves all pages with uncached dynamic SSR, producing a 1.0 s TTFB for static content.**
+
+- **How does this affect users?** TTFB is 1.0 s on mobile. For a tourism content site where the vast majority of pages contain fully static content — destination articles, event listings, media galleries — regenerating the full HTML on every anonymous request wastes server time and creates a visible delay before the browser can begin parsing any HTML. Because nothing can render before the first byte of HTML arrives, every millisecond of unnecessary TTFB directly delays both FCP and LCP.
+- **Which metric(s) are being affected?** TTFB (1.0 s field), FCP (5.1 s lab), LCP (14.5 s lab / 3.2 s field), overall Performance score.
+- **What is the cause?** Drupal 7's page cache for anonymous users appears to be disabled or unconfigured. Without caching, every page view triggers a full PHP bootstrap, multiple database queries, Drupal hook invocations, and theme rendering — all before a single byte is sent to the browser. The content on most pages does not change between requests, so this full rebuild is unnecessary for anonymous visitors.
+- **What is the solution?** Enable Drupal's built-in anonymous page cache at `admin/config/development/performance`. For higher-traffic scenarios, place a reverse-proxy cache (Varnish) or CDN (Cloudflare Page Cache) in front of the origin. For the lowest-traffic static pages, the Boost module can export flat HTML files that bypass PHP entirely. Any of these options would reduce TTFB to approximately 50–100 ms from the current 1.0 s.
+- **Is this the best rendering choice?** No. For publicly accessible, largely static content that does not change on every request, full dynamic uncached SSR on every hit is the least efficient option available within the existing Drupal architecture. A cached SSR response requires no architectural change and is straightforward to enable.
+- **WISE rating:** Impact 4, Severity 4, Reach 5, Ease 4
+- **Final score:** 42/50, **High priority**
+
+---
+
+### Updated ranked corrective backlog (including rendering strategy findings)
+
+| Rank | ID  | Finding | Score |
+| ---- | --- | ------- | ----- |
+| 1    | —   | Images dominate the page payload | 48/50 |
+| 2    | B1  | JS delivered as 41 individual synchronous blocking files | 46/50 |
+| 2    | B3  | Images have no next-gen format, srcset, or lazy loading | 46/50 |
+| 2    | —   | The homepage LCP element appears too late | 46/50 |
+| 2    | RS1 | Hero carousel is CSR-dependent — LCP gated behind JS execution | 46/50 |
+| 6    | C1  | No critical CSS inlined — @import chains delay first paint | 44/50 |
+| 7    | —   | Render-blocking CSS and font delivery delay the first visible paint | 42/50 |
+| 7    | B4  | Google Maps API loads synchronously, blocking the main thread | 42/50 |
+| 7    | RS2 | Dynamic uncached SSR on every request produces 1.0 s TTFB | 42/50 |
+| 10   | —   | The homepage makes too many requests | 40/50 |
+| 10   | B2  | CSS fragmented across 94 @import-loaded files, no route splitting | 40/50 |
+| 10   | C2  | 87% of all CSS delivered to the browser is unused | 40/50 |
+| 13   | —   | Too much front-end code and too many separate JS/CSS files | 38/50 |
+| 14   | F1  | JS-driven parallax triggers a repaint on every scroll frame | 37/50 |
+| 15   | F2  | `transition: all` on 864 elements forces full style recalculation | 36/50 |
+| 16   | C3  | JS payload dominated by ~1,332 KB of analytics infrastructure | 34/50 |
+| 17   | —   | Rendering work is more expensive than it should be | 32/50 |
+| 17   | B5  | Duplicate and deprecated analytics (UA + 2× GA4) | 32/50 |
+| 19   | L1  | animate.css (72.5 KB) loaded but zero elements use it | 28/50 |
+| 20   | L2  | 11 forced GPU layers via `translateZ(0)` hack without purpose | 26/50 |
+
+---
+
 ## Bundle-Specific Findings
 
 ### Corrective findings
@@ -172,7 +227,7 @@ The findings below combine rendering and networking issues into a single cleaned
 
 ## Master Ranked Backlog (All Findings)
 
-This table merges all corrective findings across all audit rounds — baseline, bundle, coverage, flame chart, and layers.
+This table merges all corrective findings across all audit rounds — baseline, bundle, coverage, flame chart, layers, and rendering strategies.
 
 | Rank | ID  | Finding                                                             | Score | Priority |
 | ---- | --- | ------------------------------------------------------------------- | ----- | -------- |
@@ -180,20 +235,22 @@ This table merges all corrective findings across all audit rounds — baseline, 
 | 2    | B1  | JS delivered as 41 individual synchronous blocking files            | 46/50 | High     |
 | 2    | B3  | Images have no next-gen format, srcset, or lazy loading             | 46/50 | High     |
 | 2    | —   | The homepage LCP element appears too late                           | 46/50 | High     |
-| 5    | C1  | No critical CSS inlined — @import chains delay first paint          | 44/50 | High     |
-| 6    | —   | Render-blocking CSS and font delivery delay the first visible paint | 42/50 | High     |
-| 6    | B4  | Google Maps API loads synchronously, blocking the main thread       | 42/50 | High     |
-| 8    | —   | The homepage makes too many requests                                | 40/50 | High     |
-| 8    | B2  | CSS fragmented across 94 @import-loaded files, no route splitting   | 40/50 | High     |
-| 8    | C2  | 87% of all CSS delivered to the browser is unused                   | 40/50 | High     |
-| 11   | —   | Too much front-end code and too many separate JS/CSS files          | 38/50 | Medium   |
-| 12   | F1  | JS-driven parallax triggers a repaint on every scroll frame         | 37/50 | Medium   |
-| 13   | F2  | `transition: all` on 864 elements forces full style recalculation   | 36/50 | Medium   |
-| 14   | C3  | JS payload dominated by ~1,332 KB of analytics infrastructure       | 34/50 | Medium   |
-| 15   | —   | Rendering work is more expensive than it should be                  | 32/50 | Medium   |
-| 15   | B5  | Duplicate and deprecated analytics (UA + 2× GA4)                    | 32/50 | Medium   |
-| 17   | L1  | animate.css (72.5 KB) loaded but zero elements use it               | 28/50 | Lower    |
-| 18   | L2  | 11 forced GPU layers via `translateZ(0)` hack without purpose       | 26/50 | Lower    |
+| 2    | RS1 | Hero carousel is CSR-dependent — LCP gated behind JS execution      | 46/50 | High     |
+| 6    | C1  | No critical CSS inlined — @import chains delay first paint          | 44/50 | High     |
+| 7    | —   | Render-blocking CSS and font delivery delay the first visible paint | 42/50 | High     |
+| 7    | B4  | Google Maps API loads synchronously, blocking the main thread       | 42/50 | High     |
+| 7    | RS2 | Dynamic uncached SSR on every request produces 1.0 s TTFB          | 42/50 | High     |
+| 10   | —   | The homepage makes too many requests                                | 40/50 | High     |
+| 10   | B2  | CSS fragmented across 94 @import-loaded files, no route splitting   | 40/50 | High     |
+| 10   | C2  | 87% of all CSS delivered to the browser is unused                   | 40/50 | High     |
+| 13   | —   | Too much front-end code and too many separate JS/CSS files          | 38/50 | Medium   |
+| 14   | F1  | JS-driven parallax triggers a repaint on every scroll frame         | 37/50 | Medium   |
+| 15   | F2  | `transition: all` on 864 elements forces full style recalculation   | 36/50 | Medium   |
+| 16   | C3  | JS payload dominated by ~1,332 KB of analytics infrastructure       | 34/50 | Medium   |
+| 17   | —   | Rendering work is more expensive than it should be                  | 32/50 | Medium   |
+| 17   | B5  | Duplicate and deprecated analytics (UA + 2× GA4)                    | 32/50 | Medium   |
+| 19   | L1  | animate.css (72.5 KB) loaded but zero elements use it               | 28/50 | Lower    |
+| 20   | L2  | 11 forced GPU layers via `translateZ(0)` hack without purpose       | 26/50 | Lower    |
 
 ### Good findings
 
