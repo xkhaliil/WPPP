@@ -1,4 +1,5 @@
 # Discover Tunisia — Performance Audit
+
 ## Implementer's Guide
 
 **Site:** discovertunisia.com (Drupal 7)  
@@ -16,6 +17,7 @@ Domains considered but found to have no applicable findings are listed at the en
 Every measurement in this audit was taken under these conditions. Use the same settings to reproduce any result and to verify any fix.
 
 **Lighthouse / PageSpeed Insights settings**
+
 - Mode: Navigation
 - Device: Mobile
 - Emulated device: Moto G Power
@@ -23,6 +25,7 @@ Every measurement in this audit was taken under these conditions. Use the same s
 - Network: Slow 4G (1.6 Mbps down, 0.75 Mbps up, 150 ms RTL)
 
 **Chrome DevTools — matching those settings manually**
+
 1. Open DevTools → Sensors → Device: `Moto G Power`
 2. Network panel → throttle dropdown → **Slow 4G** (preset)
 3. Performance panel → gear icon → CPU: **4× slowdown**
@@ -49,13 +52,16 @@ Record with CPU 4× throttle + Slow 4G. Look for the LCP marker in the Timings r
 **Mechanism**  
 Drupal 7 runs a full PHP bootstrap on every request: bootstrap, database queries, hook invocations, theme rendering, then output. For anonymous visitors reading static content (destination articles, event listings), none of that work produces a different result than the previous request — the page has not changed. Drupal's built-in anonymous page cache (`cache_page`) stores the rendered HTML keyed by URL and serves it from memory for subsequent anonymous requests, bypassing PHP entirely. It appears to be disabled.
 
-**Reproduce**  
+**Reproduce**
+
 ```
 curl -o /dev/null -s -w "TTFB: %{time_starttransfer}s\n" https://www.discovertunisia.com/
 ```
+
 Run three times. You will see values around 0.9–1.1 s consistently. Alternatively, in the Network panel with Slow 4G disabled, load the homepage and observe the "Waiting (TTFB)" segment in the waterfall for the first HTML document request — it will be close to 1 s even without throttling.
 
-**Fix**  
+**Fix**
+
 1. Log in as admin and go to `admin/config/development/performance`.
 2. Under "Caching", check **"Cache pages for anonymous users"**.
 3. Set "Minimum cache lifetime" to `10 min` as a starting point.
@@ -114,6 +120,7 @@ DevTools → toggle Device toolbar → select Moto G Power → reload. Then in t
 
 **Fix**  
 In Drupal 7, add responsive breakpoint sizes to the relevant Image Styles:
+
 1. `admin/config/media/image-styles` → edit the hero image style → add a "Scale" effect at a second width (e.g. 768 px for tablet, 400 px for mobile).
 2. Install and configure the **Picture** module (`drupal.org/project/picture`) — this is the Drupal 7 backport of the HTML5 `<picture>` element. It maps image styles to breakpoints and renders `<picture><source srcset="...">` markup automatically.
 3. Define breakpoints in `[theme].breakpoints.yml` (or `[theme].info` for Picture module):
@@ -146,16 +153,21 @@ For the LCP specifically: run Lighthouse → expand the "Largest Contentful Pain
 **Fix — three separate attribute changes**
 
 1. **On the LCP image only** — add `fetchpriority="high"` and ensure it is NOT lazy-loaded:
+
    ```html
-   <img src="hero-first-slide.webp" fetchpriority="high" alt="...">
+   <img src="hero-first-slide.webp" fetchpriority="high" alt="..." />
    ```
+
    In Drupal 7 this means overriding the template that renders the first slide (see RS-01 below for how to identify it).
 
 2. **On all other images** — add `loading="lazy"`:
+
    ```html
-   <img src="thumbnail.jpg" loading="lazy" alt="...">
+   <img src="thumbnail.jpg" loading="lazy" alt="..." />
    ```
+
    In Drupal 7 this is most efficiently done by overriding the `theme_image()` function in `template.php`:
+
    ```php
    function [theme]_image($variables) {
      $variables['attributes']['loading'] = 'lazy';
@@ -163,11 +175,17 @@ For the LCP specifically: run Lighthouse → expand the "Largest Contentful Pain
      return theme_image($variables);
    }
    ```
+
    For a site-wide approach, install the **Lazy Loader** module (`drupal.org/project/lazy`).
 
 3. **Preload the LCP image** — add a `<link rel="preload">` tag in `<head>` for the first hero image:
    ```html
-   <link rel="preload" as="image" href="/path/to/hero-first.webp" fetchpriority="high">
+   <link
+     rel="preload"
+     as="image"
+     href="/path/to/hero-first.webp"
+     fetchpriority="high"
+   />
    ```
    In Drupal 7, add this via `hook_page_alter()` or in `html.tpl.php`.
 
@@ -195,6 +213,7 @@ View source → search for `<script`. Count the `<script src=` tags inside `<hea
 
 **Stage 2 (add `defer` to all non-critical scripts):**  
 Create or update a custom module with `hook_js_alter()`:
+
 ```php
 function mymodule_js_alter(&$javascript) {
   foreach ($javascript as $key => &$script) {
@@ -205,6 +224,7 @@ function mymodule_js_alter(&$javascript) {
   }
 }
 ```
+
 This is a blanket `defer` pass. After applying it, test thoroughly — some scripts that rely on synchronous execution order (particularly jQuery UI widgets that initialise on DOMContentLoaded) may fail. Fix breakages by explicitly removing `defer` for specific scripts in the same hook.
 
 **Scripts that must remain synchronous (known exceptions):**  
@@ -227,10 +247,13 @@ View source → search for `maps.googleapis.com`. The script tag will have no `d
 
 **Fix**  
 The Maps API is loaded by a Drupal module — likely `gmap`, `location`, or a custom module. Find the `drupal_add_js()` call that adds the Maps API:
+
 ```
 grep -r "maps.googleapis.com" sites/
 ```
+
 Once located, add the `async` attribute to that specific script registration. If using `drupal_add_js()`:
+
 ```php
 drupal_add_js(
   'https://maps.googleapis.com/maps/api/js?key=YOUR_KEY&callback=initMap',
@@ -241,6 +264,7 @@ drupal_add_js(
   )
 );
 ```
+
 Additionally, move the map initialisation script to the footer so it runs after the DOM is parsed.
 
 For maximum impact: lazy-load the map. Replace the map container with a static image of the map (Google Static Maps API or a screenshot). Only inject the interactive Maps iframe when the user scrolls within 200 px of the container. A simple IntersectionObserver pattern handles this without a library.
@@ -264,14 +288,19 @@ DevTools → Coverage tab → reload homepage. After load, filter by JS. Scroll 
 
 **Fix**  
 For each unnecessary library, locate where it is added in the module code:
+
 ```
 grep -r "kolortools\|venobox\|lightbox\|cluster" sites/all/modules/
 ```
+
 The call will look like:
+
 ```php
 drupal_add_js(drupal_get_path('module', 'mymodule') . '/js/kolortools.js');
 ```
+
 Wrap it in a page condition:
+
 ```php
 // Only load on virtual tour node pages
 if (arg(0) === 'node') {
@@ -281,6 +310,7 @@ if (arg(0) === 'node') {
   }
 }
 ```
+
 For lightbox: it is loaded twice (lightbox2 and magnific-popup). Pick one. Remove the other entirely from the module configuration or comment out its `drupal_add_js()` call.
 
 Bootstrap JS is loaded twice: once from `cdn.jsdelivr.net` and once from `sites/all/themes/bootstrap/js/bootstrap.js`. Remove the CDN copy — the theme copy already exists locally. Find the CDN reference in `sites/all/themes/[theme]/[theme].info` or in the theme's `template.php` and delete that line.
@@ -300,7 +330,8 @@ Universal Analytics (`analytics.js`) was permanently discontinued by Google in J
 **Reproduce**  
 Network panel → filter by "analytics" or "gtag" → you will see requests to `www.google-analytics.com/analytics.js` (the deprecated UA script) alongside the GA4 requests. Open GTM preview mode (`tagmanager.google.com` → preview) and fire the homepage — you will see which tags fire and whether both GA4 properties and the UA property are active.
 
-**Fix**  
+**Fix**
+
 1. Log in to Google Tag Manager → find the tag that loads `analytics.js` or fires a "Universal Analytics" tag type → **pause or delete it**.
 2. In GTM, audit which GA4 tags fire. If both `G-6JDRN6682Q` and `G-BHS8ENZZLM` are present, confirm with the analytics owner which is the live property. Remove the redundant one.
 3. Publish the updated GTM container.
@@ -335,6 +366,7 @@ The `@import`-based aggregation is produced by Drupal 7 core CSS aggregation whe
 
 **Inline critical CSS (high-effort, high-reward):**  
 This is the correct long-term fix but requires a build step. The process:
+
 1. Run the homepage through a critical CSS extractor: `criticalcss.com` or the npm `critical` package pointed at a static snapshot of the homepage HTML.
 2. The extractor produces the minimum CSS needed to render above-the-fold content.
 3. Inline that CSS directly in `html.tpl.php` inside a `<style>` tag.
@@ -354,13 +386,13 @@ View source → the `<head>` should contain `<link rel="stylesheet">` tags point
 **Mechanism**  
 All module stylesheets are loaded on every page regardless of whether the module is active on that page. Key offenders (from DevTools Coverage):
 
-| File | Total | Used | Wasted |
-| --- | --- | --- | --- |
-| Bootstrap 3.3.5 (CDN) | 144 KB | 9.4 KB | 134.6 KB |
-| animate.css | 72.6 KB | 0.1 KB | 72.5 KB |
-| Google Fonts — Roboto | 42.2 KB | 0 KB | 42.2 KB |
-| Font Awesome (loaded twice) | ~66 KB | ~1.2 KB | ~65 KB |
-| Google Fonts — Open Sans | 22.7 KB | 0 KB | 22.7 KB |
+| File                        | Total   | Used    | Wasted   |
+| --------------------------- | ------- | ------- | -------- |
+| Bootstrap 3.3.5 (CDN)       | 144 KB  | 9.4 KB  | 134.6 KB |
+| animate.css                 | 72.6 KB | 0.1 KB  | 72.5 KB  |
+| Google Fonts — Roboto       | 42.2 KB | 0 KB    | 42.2 KB  |
+| Font Awesome (loaded twice) | ~66 KB  | ~1.2 KB | ~65 KB   |
+| Google Fonts — Open Sans    | 22.7 KB | 0 KB    | 22.7 KB  |
 
 **Reproduce**  
 Coverage tab → reload homepage with cache disabled → filter by CSS. The "Unused Bytes" column will show the values above. Sort descending by unused bytes to identify the top offenders.
@@ -370,6 +402,7 @@ Coverage tab → reload homepage with cache disabled → filter by CSS. The "Unu
 **Bootstrap (134.6 KB wasted):** Bootstrap is loaded from CDN and also ships as part of the Drupal Bootstrap theme. The CDN copy is redundant — remove it from the theme's `.info` file (look for `stylesheets[all][] = //cdn.jsdelivr.net/...`). For the remaining copy: Drupal Bootstrap 7 supports custom Bootstrap builds via its settings at `admin/appearance/settings/[theme]`. Disable every Bootstrap component that is not in use (modals, carousels, form components). A custom build can reduce Bootstrap CSS from 144 KB to under 20 KB.
 
 **animate.css (72.5 KB wasted):** This is loaded by the Drupal Builder module. No elements on the page use animation classes. Disable the Builder module's animate.css setting, or if the module does not expose a setting, use `hook_css_alter()` to remove it:
+
 ```php
 function mymodule_css_alter(&$css) {
   foreach ($css as $key => $value) {
@@ -383,6 +416,7 @@ function mymodule_css_alter(&$css) {
 **Google Fonts (Roboto + Open Sans, 100% unused):** Both fonts are requested but zero characters are rendered using either family on the homepage. Find the `<link>` tag in `html.tpl.php` or in the theme's `.info` file and remove both. Check the computed `font-family` on the `<body>` element to confirm which font is actually in use — it is likely a system font or the Bootstrap default stack.
 
 **Font Awesome (loaded twice, 65 KB wasted):** Loaded once from the theme and once from the Builder module. Use `hook_css_alter()` to remove the duplicate:
+
 ```php
 function mymodule_css_alter(&$css) {
   // Remove the Builder module's copy, keep the theme copy
@@ -455,11 +489,12 @@ Performance panel → start recording → scroll slowly down the homepage → st
 
 **Fix**  
 Locate the parallax script — most likely `sites/all/themes/[theme]/js/parallax.js` or a similar path. Replace the `scroll` event listener with a `requestAnimationFrame`-based approach:
+
 ```javascript
 let ticking = false;
-window.addEventListener('scroll', function() {
+window.addEventListener("scroll", function () {
   if (!ticking) {
-    requestAnimationFrame(function() {
+    requestAnimationFrame(function () {
       updateParallax(window.scrollY);
       ticking = false;
     });
@@ -467,6 +502,7 @@ window.addEventListener('scroll', function() {
   }
 });
 ```
+
 Additionally, change the CSS property being animated from `background-position` or `top` to `transform: translateY(...)`. `transform` is composited on the GPU and does not trigger layout or paint on the main thread.
 
 **Verify**  
@@ -485,22 +521,30 @@ Performance panel → record while scrolling → Paint events should no longer a
 Performance panel → start recording → hover over several navigation links and buttons → stop. Expand "Recalculate Style" events — in the details panel, "Elements Affected" will show a large number. The style rule source will point to a selector with `transition: all`.
 
 To find the rule:
+
 ```javascript
 // In DevTools console
-Array.from(document.querySelectorAll('*'))
-  .filter(el => getComputedStyle(el).transition.startsWith('all'))
-  .length
+Array.from(document.querySelectorAll("*")).filter((el) =>
+  getComputedStyle(el).transition.startsWith("all"),
+).length;
 ```
 
 **Fix**  
 In the theme CSS (likely `ontt.css` or a component stylesheet), search for:
+
 ```css
-transition: all
+transition: all;
 ```
+
 Replace each instance with an explicit list of only the properties that actually need to transition. For buttons and links, typically:
+
 ```css
-transition: color 0.2s ease, background-color 0.2s ease, opacity 0.2s ease;
+transition:
+  color 0.2s ease,
+  background-color 0.2s ease,
+  opacity 0.2s ease;
 ```
+
 This eliminates the catch-all watcher and scopes the browser's work to the properties that actually change.
 
 **Verify**  
@@ -520,9 +564,11 @@ Layers panel → load the homepage → look for layers with no visible animation
 
 **Fix**  
 In the theme CSS, search for:
+
 ```
 grep -r "translateZ(0)\|will-change" sites/all/themes/
 ```
+
 For each occurrence, verify whether the element it targets actually animates. If not, remove the `translateZ(0)` or `will-change` declaration. For elements that do animate, `will-change: transform` is the modern, correct way to hint compositing — replace `translateZ(0)` with it where it is genuinely needed.
 
 **Verify**  
@@ -585,4 +631,4 @@ Both Google Fonts families loaded on the homepage (Roboto and Open Sans) are 100
 
 ---
 
-*All reproduction steps were verified against the live site as of July 2026. Tool versions: Chrome 125, Lighthouse 12. Drupal version: 7.x (confirmed from response headers and markup patterns).*
+_All reproduction steps were verified against the live site as of July 2026. Tool versions: Chrome 125, Lighthouse 12. Drupal version: 7.x (confirmed from response headers and markup patterns)._
